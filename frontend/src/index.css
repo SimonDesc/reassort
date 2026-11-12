@@ -1,0 +1,259 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/dm-sans";
+@import "@fontsource/fira-sans/600.css";
+@import "@fontsource/fira-sans/700.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Structure reprise de Service-9000 (rôles de texte, composants ui). Palette et typographie inspirées de l'univers du
+ * Comptoir des Pharmacies : marine pour les titres et le texte, vert pour l'action, fonds gris-bleu, Fira Sans pour les
+ * titres et DM Sans pour le texte, arrondis courts. Une couleur = un sens :
+ *   - vert (primary)        : action principale, sélection
+ *   - marine (foreground)   : titres et données
+ *   - 4 statuts de produit  : ok (couverture suffisante), surveiller, rupture (seul usage du rouge), commandé
+ * Règles d'écran : docs/GUIDE-UI.md.
+ */
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: var(--app-font-sans);
+    --font-display: var(--app-font-display);
+
+    --color-surface: var(--surface);
+    --color-titre: var(--titre);
+    --color-marque: var(--marque);
+    --color-st-ok: var(--st-ok);
+    --color-st-surveiller: var(--st-surveiller);
+    --color-st-rupture: var(--st-rupture);
+    --color-st-commande: var(--st-commande);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    --radius: 0.5rem;
+    --app-font-sans: 'DM Sans Variable', ui-sans-serif, system-ui, sans-serif;
+    --app-font-display: 'Fira Sans', 'DM Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
+    /* Fonds gris-bleu clairs (#F8F9FB), titres marine (#1E266D), texte #333758 */
+    --background: oklch(0.982 0.003 265);
+    --foreground: oklch(0.31 0.04 278);
+    --titre: oklch(0.28 0.11 273);
+    --surface: oklch(0.962 0.008 270);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.31 0.04 278);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.31 0.04 278);
+
+    /* Vert d'action (#19B872), assombri pour garder un texte blanc lisible sur les boutons */
+    --primary: oklch(0.6 0.14 158);
+    --primary-foreground: oklch(1 0 0);
+    --marque: oklch(0.7 0.16 158);
+
+    --secondary: oklch(0.955 0.01 270);
+    --secondary-foreground: oklch(0.28 0.11 273);
+    --muted: oklch(0.962 0.008 270);
+    --muted-foreground: oklch(0.52 0.03 278);
+    --accent: oklch(0.945 0.014 270);
+    --accent-foreground: oklch(0.28 0.11 273);
+
+    --destructive: oklch(0.55 0.21 22);
+
+    --st-ok: oklch(0.55 0.13 158);
+    --st-surveiller: oklch(0.62 0.15 60);
+    --st-rupture: oklch(0.55 0.21 22);
+    --st-commande: oklch(0.45 0.13 273);
+
+    /* Filets lavande (#AEB2D1 éclairci) */
+    --border: oklch(0.915 0.015 275);
+    --input: oklch(0.86 0.025 275);
+    --ring: oklch(0.6 0.14 158);
+
+    --chart-1: oklch(0.6 0.14 158);
+    --chart-2: oklch(0.62 0.15 60);
+    --chart-3: oklch(0.45 0.13 273);
+}
+
+.dark {
+    --background: oklch(0.19 0.035 275);
+    --foreground: oklch(0.93 0.012 275);
+    --titre: oklch(0.96 0.015 275);
+    --surface: oklch(0.215 0.04 275);
+    --card: oklch(0.23 0.042 275);
+    --card-foreground: oklch(0.93 0.012 275);
+    --popover: oklch(0.25 0.042 275);
+    --popover-foreground: oklch(0.93 0.012 275);
+
+    --primary: oklch(0.72 0.15 158);
+    --primary-foreground: oklch(0.2 0.04 275);
+    --marque: oklch(0.72 0.15 158);
+
+    --secondary: oklch(0.28 0.04 275);
+    --secondary-foreground: oklch(0.93 0.012 275);
+    --muted: oklch(0.27 0.04 275);
+    --muted-foreground: oklch(0.72 0.025 275);
+    --accent: oklch(0.29 0.045 275);
+    --accent-foreground: oklch(0.95 0.01 275);
+
+    --destructive: oklch(0.68 0.19 22);
+
+    --st-ok: oklch(0.76 0.14 158);
+    --st-surveiller: oklch(0.8 0.13 65);
+    --st-rupture: oklch(0.7 0.18 22);
+    --st-commande: oklch(0.76 0.09 273);
+
+    --border: oklch(1 0 0 / 9%);
+    --input: oklch(1 0 0 / 14%);
+    --ring: oklch(0.72 0.15 158);
+
+    --chart-1: oklch(0.72 0.15 158);
+    --chart-2: oklch(0.8 0.13 65);
+    --chart-3: oklch(0.76 0.09 273);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01" on;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+  a, button, [role="tab"], [role="menuitem"], [role="option"] {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+    transition-duration: 120ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+/* ═══ Rôles de texte ═══
+ * Un texte d'écran prend l'un de ces rôles, jamais une taille, une graisse ou un gris écrits à la main.
+ * Quatre tailles (12, 14, 16, 20 px), deux graisses (400, 600). Le noir porte la donnée, le gris ce qui aide à la
+ * lire. La couleur ne sert qu'au sens (statut, alerte, action) et se pose par-dessus un rôle.
+ */
+@layer components {
+  /* Donnée courante : libellé produit, cellule */
+  .texte-donnee {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 400;
+    color: var(--foreground);
+  }
+  /* Phrase secondaire : état vide, complément d'une ligne */
+  .texte-discret {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 400;
+    color: var(--muted-foreground);
+  }
+  /* Métadonnée : CIP13, fournisseur, date */
+  .texte-meta {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 400;
+    color: var(--muted-foreground);
+  }
+  /* Intitulé : libellé de colonne, de propriété */
+  .texte-intitule {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
+  }
+  /* Valeur principale d'une ligne : nom du produit, total */
+  .texte-valeur {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+    color: var(--titre);
+  }
+  /* Titre de section */
+  .texte-section {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+    color: var(--titre);
+  }
+  /* Titre de page */
+  .texte-titre {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 700;
+    color: var(--titre);
+  }
+}
+
+@layer utilities {
+  /* Mot mis en avant dans un titre, souligné de vert comme sur le site du Comptoir */
+  .souligne-marque {
+    background: linear-gradient(transparent 82%, color-mix(in oklch, var(--marque) 55%, transparent) 82%);
+  }
+  /* Montants et quantités : chiffres tabulaires, alignés à droite dans les tableaux */
+  .tabular { font-variant-numeric: tabular-nums; }
+}
+
+/* Marge intérieure d'une carte : 24 px sur une page, 16 px dans une fenêtre (`cartes-etroites`). */
+@utility p-carte {
+  padding: var(--marge-carte, 1.5rem);
+}
+@utility cartes-etroites {
+  --marge-carte: 1rem;
+}
+
+/* Le contenu d'une page apparaît en douceur ; le mouvement accompagne un changement d'état, jamais décoratif. */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+.page-enter { animation: page-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Validation du panier : le cercle puis la coche se tracent une seule fois (AnimatedCheck). */
+@keyframes check-circle { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
+@keyframes check-tick { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
+@keyframes check-pop { 0% { transform: scale(0.8); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.check-anim { animation: check-pop 360ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.check-anim .check-circle { stroke-dasharray: 60; animation: check-circle 360ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.check-anim .check-tick { stroke-dasharray: 20; animation: check-tick 240ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

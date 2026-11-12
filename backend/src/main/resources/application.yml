@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: reassort
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/reassort}
+    username: ${DB_USER:reassort}
+    password: ${DB_PASSWORD:reassort}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

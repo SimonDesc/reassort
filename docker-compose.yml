@@ -1,0 +1,30 @@
+# Déploiement (Coolify) ou essai local avec Docker : l'application et sa base.
+services:
+  app:
+    build: .
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/reassort
+      DB_USER: reassort
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant}
+    ports:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: reassort
+      POSTGRES_USER: reassort
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant}
+    volumes:
+      - donnees:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reassort -d reassort"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  donnees:
