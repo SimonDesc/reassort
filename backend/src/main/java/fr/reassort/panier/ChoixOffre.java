@@ -21,7 +21,8 @@ import java.util.Optional;
  */
 public final class ChoixOffre {
 
-	static final int MOIS_AVANT_PEREMPTION = 3;
+	/** Un lot n'intéresse un acheteur que s'il lui reste ce temps, une fois livré, pour écouler ses boîtes. */
+	public static final int MOIS_AVANT_PEREMPTION = 3;
 
 	private ChoixOffre() {
 	}

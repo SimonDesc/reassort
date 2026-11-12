@@ -63,3 +63,15 @@ CREATE TABLE ligne_panier (
 
 CREATE INDEX ON offre (cip13);
 CREATE INDEX ON ligne_panier (panier_id);
+
+-- Annonces de déstockage publiées par la pharmacie : son surstock, proposé aux confrères sur la marketplace
+CREATE TABLE annonce_destockage (
+    id             BIGINT        GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    cip13          CHAR(13)      NOT NULL REFERENCES produit,
+    quantite       INTEGER       NOT NULL CHECK (quantite > 0),
+    prix_unitaire  NUMERIC(10,2) NOT NULL CHECK (prix_unitaire > 0),
+    peremption     DATE          NOT NULL,
+    publiee_le     TIMESTAMPTZ   NOT NULL
+);
+
+CREATE UNIQUE INDEX ON annonce_destockage (cip13);

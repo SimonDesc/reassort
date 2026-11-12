@@ -13,7 +13,9 @@ import java.time.LocalDate;
  * sécurité : même en commandant aujourd'hui, la marge est entamée ;</li>
  * <li><b>à commander</b> si la couverture est inférieure à l'horizon de commande + ce même délai : sans commande
  * cette semaine, le produit passera sous le seuil avant la prochaine ;</li>
- * <li><b>quantité suggérée</b> = de quoi couvrir horizon + délai + sécurité, moins le stock.</li>
+ * <li><b>quantité suggérée</b> = de quoi couvrir horizon + délai + sécurité, moins le stock ;</li>
+ * <li><b>surstock</b> si la couverture dépasse {@code surstockJours} (90 j), ou si le produit ne se vend plus : le
+ * surplus au-delà de {@code conserverJours} (60 j) de ventes peut être déstocké auprès des confrères.</li>
  * </ul>
  * Le colisage des fournisseurs s'applique ensuite, au moment de choisir l'offre.
  *
@@ -26,14 +28,21 @@ public final class CalculPrevision {
 
 	/** Du plus urgent au moins urgent : l'ordre sert au tri. */
 	public enum Statut {
-		RUPTURE_IMMINENTE, A_COMMANDER, COMMANDE, OK
+		RUPTURE_IMMINENTE, A_COMMANDER, COMMANDE, SURSTOCK, OK
 	}
 
-	public record Parametres(int joursHistorique, int stockSecuriteJours, int horizonJours) {
+	public record Parametres(int joursHistorique, int stockSecuriteJours, int horizonJours, int surstockJours,
+			int conserverJours) {
 		public Parametres {
-			if (joursHistorique <= 0 || stockSecuriteJours < 0 || horizonJours <= 0) {
+			if (joursHistorique <= 0 || stockSecuriteJours < 0 || horizonJours <= 0 || conserverJours <= 0
+					|| surstockJours < conserverJours) {
 				throw new IllegalArgumentException("paramètres de prévision invalides");
 			}
+		}
+
+		/** Surstock au-delà de 90 jours de couverture, en gardant 60 jours de ventes. */
+		public Parametres(int joursHistorique, int stockSecuriteJours, int horizonJours) {
+			this(joursHistorique, stockSecuriteJours, horizonJours, 90, 60);
 		}
 	}
 
@@ -55,15 +64,17 @@ public final class CalculPrevision {
 			LocalDate ruptureEstimeeLe,
 			Integer delaiLePlusCourt,
 			Statut statut,
-			int quantiteSuggeree) {
+			int quantiteSuggeree,
+			int quantiteADestocker) {
 	}
 
 	public static Prevision calculer(Entree produit, Parametres parametres, LocalDate aujourdhui) {
 		double moyenne = (double) produit.ventesSurHistorique() / parametres.joursHistorique();
 		if (moyenne == 0) {
-			// Produit sans vente sur la période : rien ne s'écoule, rien à commander.
+			// Produit sans vente sur la période : rien à commander ; s'il en reste, tout le stock dort.
+			Statut statut = produit.stock() > 0 ? Statut.SURSTOCK : Statut.OK;
 			return new Prevision(produit.cip13(), produit.libelle(), produit.stock(), produit.enCommande(), 0, null, null,
-					produit.delaiLePlusCourt(), Statut.OK, 0);
+					produit.delaiLePlusCourt(), statut, 0, produit.stock());
 		}
 
 		double couverture = produit.stock() / moyenne;
@@ -74,11 +85,12 @@ public final class CalculPrevision {
 
 		Statut statut = couverture < seuilUrgence ? Statut.RUPTURE_IMMINENTE
 				: couverture < seuilCommande ? Statut.A_COMMANDER
+				: couverture > parametres.surstockJours() ? Statut.SURSTOCK
 				: Statut.OK;
 
 		int besoin = (int) Math.ceil(moyenne * seuilCommande);
 		int quantite = 0;
-		if (statut != Statut.OK) {
+		if (statut == Statut.RUPTURE_IMMINENTE || statut == Statut.A_COMMANDER) {
 			// Ce qui est déjà commandé compte : on ne repropose pas ce que le pharmacien vient de valider.
 			quantite = Math.max(0, besoin - produit.stock() - produit.enCommande());
 			if (quantite == 0) {
@@ -86,9 +98,13 @@ public final class CalculPrevision {
 			}
 		}
 
+		int aDestocker = statut == Statut.SURSTOCK
+				? produit.stock() - (int) Math.ceil(moyenne * parametres.conserverJours())
+				: 0;
+
 		return new Prevision(produit.cip13(), produit.libelle(), produit.stock(), produit.enCommande(), arrondi(moyenne),
-				arrondi(couverture),
-				aujourdhui.plusDays((long) Math.floor(couverture)), produit.delaiLePlusCourt(), statut, quantite);
+				arrondi(couverture), aujourdhui.plusDays((long) Math.floor(couverture)), produit.delaiLePlusCourt(),
+				statut, quantite, aDestocker);
 	}
 
 	private static double arrondi(double valeur) {

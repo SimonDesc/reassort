@@ -91,6 +91,32 @@ class CalculPrevisionTest {
 	}
 
 	@Test
+	void auDelaDe90JoursDeCouvertureLeSurplusEstADestocker() {
+		// 2 par jour, 200 en stock : 100 jours de couverture ; on garde 60 jours (120 boîtes), 80 à déstocker
+		Prevision prevision = prevoir(200, 1);
+
+		assertThat(prevision.statut()).isEqualTo(Statut.SURSTOCK);
+		assertThat(prevision.quantiteADestocker()).isEqualTo(80);
+		assertThat(prevision.quantiteSuggeree()).isZero();
+	}
+
+	@Test
+	void jusquA90JoursDeCouvertureRienADestocker() {
+		Prevision prevision = prevoir(180, 1);
+
+		assertThat(prevision.statut()).isEqualTo(Statut.OK);
+		assertThat(prevision.quantiteADestocker()).isZero();
+	}
+
+	@Test
+	void unProduitQuiNeSeVendPlusEstEntierementADestocker() {
+		Prevision prevision = CalculPrevision.calculer(new Entree("3400999000017", "Bandes", 14, 0, 0, 1), PARAMETRES, AUJOURDHUI);
+
+		assertThat(prevision.statut()).isEqualTo(Statut.SURSTOCK);
+		assertThat(prevision.quantiteADestocker()).isEqualTo(14);
+	}
+
+	@Test
 	void sansOffreOnSupposeUneSemaineDeDelai() {
 		// délai supposé 7 j : urgence sous 10 j de couverture (20 boîtes)
 		assertThat(prevoir(19, null).statut()).isEqualTo(Statut.RUPTURE_IMMINENTE);

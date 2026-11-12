@@ -17,13 +17,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.ErrorResponseException;
 
 import fr.reassort.ReassortApplication;
+import fr.reassort.Refus;
 import fr.reassort.panier.ChoixOffre.Choix;
 import fr.reassort.panier.ChoixOffre.Offre;
 import fr.reassort.panier.Panier.CommandeFournisseur;
@@ -200,26 +199,19 @@ public class PanierService {
 						Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
 	}
 
-	/** Les refus du panier, renvoyés au format Problem Details (RFC 9457) avec un message lisible. */
-	public static class RefusPanier extends ErrorResponseException {
-		RefusPanier(HttpStatus statut, String detail) {
-			super(statut, ProblemDetail.forStatusAndDetail(statut, detail), null);
-		}
-	}
-
-	public static class PanierIntrouvable extends RefusPanier {
+	public static class PanierIntrouvable extends Refus {
 		PanierIntrouvable(UUID id) {
 			super(HttpStatus.NOT_FOUND, "Panier introuvable : " + id);
 		}
 	}
 
-	public static class PanierDejaValide extends RefusPanier {
+	public static class PanierDejaValide extends Refus {
 		PanierDejaValide(UUID id) {
 			super(HttpStatus.CONFLICT, "Ce panier est déjà validé.");
 		}
 	}
 
-	public static class PanierVide extends RefusPanier {
+	public static class PanierVide extends Refus {
 		PanierVide(UUID id) {
 			super(HttpStatus.UNPROCESSABLE_CONTENT, "Ce panier est vide : rien à commander.");
 		}

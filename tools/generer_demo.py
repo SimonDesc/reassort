@@ -46,7 +46,8 @@ DESTOCKAGE = [
 ]
 
 # libellé, prix grossiste (€ HT), ventes moyennes par jour ouvré, saisonnier (hiver), profil de stock
-# Profils : "rupture" (moins que le délai), "surveiller" (bientôt sous le seuil), "ok", "dormant" (stock sans ventes)
+# Profils : "rupture" (moins que le délai), "surveiller" (bientôt sous le seuil), "ok",
+# "surstock" (trop commandé : plus de 90 jours de stock), "dormant" (stock qui ne se vend presque plus)
 PRODUITS = [
     ("Paracétamol 1000 mg, 8 comprimés", 1.45, 14, False, "ok"),
     ("Paracétamol 500 mg, 16 gélules", 1.20, 9, False, "surveiller"),
@@ -81,13 +82,13 @@ PRODUITS = [
     ("Insuline glargine, 5 stylos", 38.50, 1, False, "ok"),
     ("Bandes de contention classe 2", 12.40, 1, False, "dormant"),
     ("Compresses stériles 10 x 10, boîte de 50", 3.80, 2, False, "ok"),
-    ("Pansements hydrocolloïdes, boîte de 10", 6.20, 1, False, "ok"),
+    ("Pansements hydrocolloïdes, boîte de 10", 6.20, 1, False, "surstock"),
     ("Gel hydroalcoolique 300 ml", 3.50, 3, True, "ok"),
     ("Tests antigéniques, boîte de 5", 9.90, 2, True, "rupture"),
     ("Thermomètre électronique", 6.80, 1, True, "ok"),
     ("Crème émolliente 400 ml", 8.90, 2, True, "ok"),
     ("Baume à lèvres réparateur", 2.90, 3, True, "surveiller"),
-    ("Mélatonine 1 mg, 30 comprimés", 7.40, 2, False, "ok"),
+    ("Mélatonine 1 mg, 30 comprimés", 7.40, 2, False, "surstock"),
 ]
 
 
@@ -117,12 +118,17 @@ def ventes_du_jour(base: float, saisonnier: bool, jour: date) -> int:
 
 
 def stock_selon_profil(moyenne_recente: float, profil: str) -> int:
-    couverture = {
-        "rupture": random.uniform(0.3, 1.8),
-        "surveiller": random.uniform(4, 8),
-        "ok": random.uniform(14, 35),
-        "dormant": random.uniform(60, 120),
-    }[profil]
+    # Quatre tirages par produit, quel que soit son profil : ajouter un profil ne change pas les autres produits.
+    tirages = [random.random() for _ in range(4)]
+    bornes = {
+        "rupture": (0, 0.3, 1.8),
+        "surveiller": (1, 4, 8),
+        "ok": (2, 14, 35),
+        "surstock": (2, 110, 160),
+        "dormant": (3, 150, 300),
+    }
+    rang, minimum, maximum = bornes[profil]
+    couverture = minimum + (maximum - minimum) * tirages[rang]
     return max(0, round(moyenne_recente * couverture))
 
 

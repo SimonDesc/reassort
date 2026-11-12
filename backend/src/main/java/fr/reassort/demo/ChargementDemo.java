@@ -48,7 +48,7 @@ public class ChargementDemo {
 	/** Efface tout (paniers compris) et recharge la démo. */
 	@Transactional
 	public void reinitialiser() {
-		jdbc.execute("TRUNCATE ligne_panier, panier, offre, fournisseur, vente, stock, produit");
+		jdbc.execute("TRUNCATE annonce_destockage, ligne_panier, panier, offre, fournisseur, vente, stock, produit");
 
 		DonneesOfficine donnees = officine.lire();
 		long decalage = decalageVersHier(donnees.ventes());
