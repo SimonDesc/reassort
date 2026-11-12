@@ -11,8 +11,26 @@ spring:
     problemdetails:
       enabled: true
 
+  # Serveur MCP (Spring AI) : HTTP streamable sur /mcp
+  ai:
+    mcp:
+      server:
+        name: reassort
+        version: 1.0.0
+        protocol: streamable
+        instructions: >
+          Réassort est l'assistant de commande et de déstockage d'une pharmacie d'officine.
+          Réponds en français, avec des montants en euros HT et des dates lisibles.
+          Pour « que dois-je commander ? », appelle ruptures_a_venir puis proposer_panier, et présente le panier
+          par fournisseur en signalant les ruptures imminentes, les livraisons après rupture et le franco de port.
+          Ne valide jamais un panier et ne publie jamais une annonce sans l'accord explicite du pharmacien.
+
 management:
   endpoints:
     web:
       exposure:
         include: health
+
+reassort:
+  mcp:
+    jeton: ${REASSORT_MCP_JETON:}
