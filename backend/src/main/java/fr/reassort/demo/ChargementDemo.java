@@ -3,10 +3,12 @@ package fr.reassort.demo;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,8 +104,40 @@ public class ChargementDemo {
 					ps.setObject(7, v[6].isEmpty() ? null : LocalDate.parse(v[6]).plusDays(decalage));
 				});
 
+		jdbc.update("UPDATE reglages SET jours_historique = 28, stock_securite_jours = 3, surstock_jours = 90, conserver_jours = 60");
+		historiqueDeCommandes();
+
 		LOG.info("Démo chargée : {} produits, {} lignes de ventes, {} fournisseurs, {} offres",
 				donnees.stock().size(), ventes.size(), fournisseurs.size(), offres.size());
+	}
+
+	/**
+	 * Trois commandes passées et reçues ces dernières semaines (labo, grossiste, dépositaire) : l'historique des
+	 * commandes n'est pas vide au premier lancement. Déjà reçues, elles ne changent pas la prévision.
+	 */
+	private void historiqueDeCommandes() {
+		record Passee(int ilYaJours, String fournisseur, int premier, int colis) {
+		}
+		for (Passee passee : List.of(
+				new Passee(21, "labo-direct-occitanie", 0, 2),
+				new Passee(14, "repartiteur-garonne", 6, 0),
+				new Passee(7, "depositaire-sud-ouest", 12, 4))) {
+			UUID id = UUID.randomUUID();
+			Instant valide = horloge.instant().minus(passee.ilYaJours(), ChronoUnit.DAYS);
+			Instant recu = valide.plus(passee.ilYaJours() == 21 ? 5 : passee.ilYaJours() == 7 ? 2 : 1, ChronoUnit.DAYS);
+			jdbc.update("INSERT INTO panier (id, statut, horizon_jours, cree_le, valide_le, recu_le) VALUES (?, 'RECU', 14, ?, ?, ?)",
+					id, Timestamp.from(valide), Timestamp.from(valide), Timestamp.from(recu));
+			// Quantités : quelques colis (labo, dépositaire) ou une quantité ronde à l'unité (grossiste).
+			jdbc.update("""
+					INSERT INTO ligne_panier (panier_id, offre_id, quantite, prix_unitaire, statut_produit, quantite_suggeree,
+					                          couverture_jours, livre_apres_rupture, recue_le)
+					SELECT ?, o.id, q.quantite, o.prix_unitaire, 'A_COMMANDER', q.quantite, NULL, FALSE, ?
+					FROM (SELECT o.*, row_number() OVER (ORDER BY o.cip13) AS rang FROM offre o WHERE o.fournisseur_id = ?) o
+					CROSS JOIN LATERAL (SELECT CASE WHEN ? > 0 THEN o.colisage * ? ELSE 10 + (o.rang * 7) % 30 END AS quantite) q
+					WHERE o.rang > ? AND o.rang <= ? + 6""",
+					id, Timestamp.from(recu), passee.fournisseur(), passee.colis(), passee.colis(), passee.premier(),
+					passee.premier());
+		}
 	}
 
 	private long decalageVersHier(List<VenteDuJour> ventes) {

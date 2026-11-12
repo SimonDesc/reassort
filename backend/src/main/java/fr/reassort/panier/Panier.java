@@ -15,12 +15,13 @@ public record Panier(
 		int horizonJours,
 		Instant creeLe,
 		Instant valideLe,
+		Instant recuLe,
 		BigDecimal total,
 		int nombreLignes,
 		List<CommandeFournisseur> commandes) {
 
 	public enum Statut {
-		BROUILLON, VALIDE
+		BROUILLON, VALIDE, RECU
 	}
 
 	public record CommandeFournisseur(
@@ -31,17 +32,21 @@ public record Panier(
 			BigDecimal franco,
 			/** Ce qui manque pour atteindre le franco de port ; zéro s'il est atteint. */
 			BigDecimal resteAvantFranco,
+			/** Date de réception des cartons de ce fournisseur ; null tant qu'ils ne sont pas arrivés. */
+			Instant recueLe,
 			List<Ligne> lignes) {
 	}
 
 	public record Ligne(
 			long id,
+			long offreId,
 			String cip13,
 			String libelle,
 			CalculPrevision.Statut statutProduit,
 			Double couvertureJours,
 			int quantiteSuggeree,
 			int quantite,
+			int colisage,
 			BigDecimal prixUnitaire,
 			BigDecimal montant,
 			int delaiJours,

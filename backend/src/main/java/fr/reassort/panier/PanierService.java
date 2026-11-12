@@ -88,15 +88,16 @@ public class PanierService {
 	}
 
 	public Panier lire(UUID id) {
-		record Entete(Panier.Statut statut, int horizon, Instant creeLe, Instant valideLe) {
+		record Entete(Panier.Statut statut, int horizon, Instant creeLe, Instant valideLe, Instant recuLe) {
 		}
-		Entete entete = jdbc.sql("SELECT statut, horizon_jours, cree_le, valide_le FROM panier WHERE id = ?")
+		Entete entete = jdbc.sql("SELECT statut, horizon_jours, cree_le, valide_le, recu_le FROM panier WHERE id = ?")
 				.param(id)
 				.query((rs, i) -> new Entete(
 						Panier.Statut.valueOf(rs.getString("statut")),
 						rs.getInt("horizon_jours"),
 						rs.getTimestamp("cree_le").toInstant(),
-						rs.getTimestamp("valide_le") == null ? null : rs.getTimestamp("valide_le").toInstant()))
+						instant(rs.getTimestamp("valide_le")),
+						instant(rs.getTimestamp("recu_le"))))
 				.optional()
 				.orElseThrow(() -> new PanierIntrouvable(id));
 
@@ -105,11 +106,12 @@ public class PanierService {
 				? LocalDate.ofInstant(entete.valideLe(), ReassortApplication.FUSEAU)
 				: LocalDate.now(horloge);
 
-		record LigneLue(String fournisseurId, String fournisseur, String type, BigDecimal franco, Ligne ligne) {
+		record LigneLue(String fournisseurId, String fournisseur, String type, BigDecimal franco, Instant recueLe,
+				Ligne ligne) {
 		}
 		List<LigneLue> lignes = jdbc.sql("""
-				SELECT l.id, o.cip13, p.libelle, l.statut_produit, l.couverture_jours, l.quantite_suggeree, l.quantite,
-				       l.prix_unitaire, o.delai_jours, l.livre_apres_rupture, o.peremption,
+				SELECT l.id, o.id AS offre_id, o.cip13, p.libelle, l.statut_produit, l.couverture_jours, l.quantite_suggeree,
+				       l.quantite, o.colisage, l.prix_unitaire, o.delai_jours, l.livre_apres_rupture, o.peremption, l.recue_le,
 				       f.id AS fournisseur_id, f.nom AS fournisseur, f.type, f.franco
 				FROM ligne_panier l
 				JOIN offre o ON o.id = l.offre_id
@@ -125,15 +127,17 @@ public class PanierService {
 					int delai = rs.getInt("delai_jours");
 					BigDecimal couverture = rs.getBigDecimal("couverture_jours");
 					return new LigneLue(rs.getString("fournisseur_id"), rs.getString("fournisseur"), rs.getString("type"),
-							rs.getBigDecimal("franco"), new Ligne(
-									rs.getLong("id"),
-									rs.getString("cip13"),
+													rs.getBigDecimal("franco"), instant(rs.getTimestamp("recue_le")), new Ligne(
+								rs.getLong("id"),
+								rs.getLong("offre_id"),
+								rs.getString("cip13"),
 									rs.getString("libelle"),
 									CalculPrevision.Statut.valueOf(rs.getString("statut_produit")),
 									couverture == null ? null : couverture.doubleValue(),
 									rs.getInt("quantite_suggeree"),
-									quantite,
-									prix,
+																	quantite,
+								rs.getInt("colisage"),
+								prix,
 									prix.multiply(BigDecimal.valueOf(quantite)),
 									delai,
 									depart.plusDays(delai),
@@ -149,14 +153,133 @@ public class PanierService {
 			LigneLue premiere = lignesFournisseur.getFirst();
 			BigDecimal sousTotal = lignesFournisseur.stream().map(l -> l.ligne().montant()).reduce(BigDecimal.ZERO, BigDecimal::add);
 			BigDecimal reste = premiere.franco().subtract(sousTotal).max(BigDecimal.ZERO);
+			Instant recue = lignesFournisseur.stream().allMatch(l -> l.recueLe() != null) ? premiere.recueLe() : null;
 			commandes.add(new CommandeFournisseur(fournisseurId, premiere.fournisseur(), premiere.type(), sousTotal,
-					premiere.franco(), reste, lignesFournisseur.stream().map(LigneLue::ligne).toList()));
+					premiere.franco(), reste, recue, lignesFournisseur.stream().map(LigneLue::ligne).toList()));
 		});
 		BigDecimal total = commandes.stream().map(CommandeFournisseur::sousTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-		return new Panier(id, entete.statut(), entete.horizon(), entete.creeLe(), entete.valideLe(), total, lignes.size(),
-				commandes);
+		return new Panier(id, entete.statut(), entete.horizon(), entete.creeLe(), entete.valideLe(), entete.recuLe(), total,
+				lignes.size(), commandes);
 	}
+
+	/** Tous les paniers validés ou reçus, du plus récent au plus ancien : l'historique des commandes. */
+	public List<Panier> historique() {
+		return jdbc.sql("SELECT id FROM panier WHERE statut <> 'BROUILLON' ORDER BY valide_le DESC")
+				.query(UUID.class)
+				.list().stream()
+				.map(this::lire)
+				.toList();
+	}
+
+	/**
+	 * Modifie une ligne d'un brouillon : sa quantité, ou son offre (un autre fournisseur pour le même produit). En
+	 * changeant d'offre sans donner de quantité, la quantité est arrondie au colisage du nouveau fournisseur.
+	 */
+	@Transactional
+	public Panier modifierLigne(UUID panierId, long ligneId, Integer quantite, Long offreId) {
+		exigerBrouillon(panierId);
+		record LigneActuelle(long offreId, int quantite, String cip13, BigDecimal couverture) {
+		}
+		LigneActuelle actuelle = jdbc.sql("""
+				SELECT l.offre_id, l.quantite, o.cip13, l.couverture_jours FROM ligne_panier l JOIN offre o ON o.id = l.offre_id
+				WHERE l.id = ? AND l.panier_id = ?""")
+				.params(ligneId, panierId)
+				.query((rs, i) -> new LigneActuelle(rs.getLong(1), rs.getInt(2), rs.getString(3), rs.getBigDecimal(4)))
+				.optional()
+				.orElseThrow(() -> new Refus(HttpStatus.NOT_FOUND, "Ligne introuvable dans ce panier."));
+
+		long idOffre = offreId != null ? offreId : actuelle.offreId();
+		Offre offre = offresParProduit().getOrDefault(actuelle.cip13(), List.of()).stream()
+				.filter(o -> o.id() == idOffre)
+				.findFirst()
+				.orElseThrow(() -> new Refus(HttpStatus.UNPROCESSABLE_CONTENT, "Cette offre ne concerne pas ce produit."));
+
+		int nouvelle = quantite != null ? quantite : ChoixOffre.arrondirAuColisage(actuelle.quantite(), offre.colisage());
+		if (nouvelle <= 0) {
+			throw new Refus(HttpStatus.UNPROCESSABLE_CONTENT,
+					"La quantité doit être positive : retirez la ligne pour ne pas commander ce produit.");
+		}
+		if (nouvelle % offre.colisage() != 0) {
+			throw new Refus(HttpStatus.UNPROCESSABLE_CONTENT, "Ce fournisseur vend par carton de " + offre.colisage()
+					+ " : commandez " + ChoixOffre.arrondirAuColisage(nouvelle, offre.colisage()) + ".");
+		}
+		if (offre.quantiteDisponible() != null && nouvelle > offre.quantiteDisponible()) {
+			throw new Refus(HttpStatus.UNPROCESSABLE_CONTENT,
+					"Ce lot de déstockage ne compte que " + offre.quantiteDisponible() + " boîtes.");
+		}
+		boolean apresRupture = actuelle.couverture() != null && offre.delaiJours() > actuelle.couverture().doubleValue();
+		jdbc.sql("UPDATE ligne_panier SET offre_id = ?, quantite = ?, prix_unitaire = ?, livre_apres_rupture = ? WHERE id = ?")
+				.params(offre.id(), nouvelle, offre.prixUnitaire(), apresRupture, ligneId)
+				.update();
+		return lire(panierId);
+	}
+
+	@Transactional
+	public Panier retirerLigne(UUID panierId, long ligneId) {
+		exigerBrouillon(panierId);
+		if (jdbc.sql("DELETE FROM ligne_panier WHERE id = ? AND panier_id = ?").params(ligneId, panierId).update() == 0) {
+			throw new Refus(HttpStatus.NOT_FOUND, "Ligne introuvable dans ce panier.");
+		}
+		return lire(panierId);
+	}
+
+	/**
+	 * Les cartons d'un fournisseur sont arrivés : ses lignes sont reçues et le stock augmente d'autant. Quand tous les
+	 * fournisseurs ont livré, le panier passe « Reçu ».
+	 */
+	@Transactional
+	public Panier recevoir(UUID panierId, String fournisseurId) {
+		Panier panier = lire(panierId);
+		if (panier.statut() != Panier.Statut.VALIDE) {
+			throw new Refus(HttpStatus.CONFLICT, panier.statut() == Panier.Statut.RECU
+					? "Cette commande est déjà entièrement reçue."
+					: "Seule une commande validée peut être réceptionnée.");
+		}
+		Timestamp maintenant = Timestamp.from(horloge.instant());
+		List<Long> lignes = jdbc.sql("""
+				SELECT l.id FROM ligne_panier l JOIN offre o ON o.id = l.offre_id
+				WHERE l.panier_id = ? AND o.fournisseur_id = ? AND l.recue_le IS NULL""")
+				.params(panierId, fournisseurId)
+				.query(Long.class)
+				.list();
+		if (lignes.isEmpty()) {
+			throw new Refus(HttpStatus.CONFLICT, "Rien à réceptionner pour ce fournisseur dans cette commande.");
+		}
+		jdbc.sql("""
+				UPDATE stock s SET quantite = s.quantite + r.quantite, releve_le = :maintenant
+				FROM (SELECT o.cip13, sum(l.quantite) AS quantite FROM ligne_panier l JOIN offre o ON o.id = l.offre_id
+				      WHERE l.id IN (:lignes) GROUP BY o.cip13) r
+				WHERE s.cip13 = r.cip13""")
+				.param("maintenant", maintenant)
+				.param("lignes", lignes)
+				.update();
+		jdbc.sql("UPDATE ligne_panier SET recue_le = :maintenant WHERE id IN (:lignes)")
+				.param("maintenant", maintenant)
+				.param("lignes", lignes)
+				.update();
+		jdbc.sql("""
+				UPDATE panier SET statut = 'RECU', recu_le = ?
+				WHERE id = ? AND NOT EXISTS (SELECT 1 FROM ligne_panier WHERE panier_id = ? AND recue_le IS NULL)""")
+				.params(maintenant, panierId, panierId)
+				.update();
+		return lire(panierId);
+	}
+
+	private void exigerBrouillon(UUID panierId) {
+		Panier.Statut statut = jdbc.sql("SELECT statut FROM panier WHERE id = ?").param(panierId)
+				.query((rs, i) -> Panier.Statut.valueOf(rs.getString(1)))
+				.optional()
+				.orElseThrow(() -> new PanierIntrouvable(panierId));
+		if (statut != Panier.Statut.BROUILLON) {
+			throw new PanierDejaValide(panierId);
+		}
+	}
+
+	private static Instant instant(Timestamp horodatage) {
+		return horodatage == null ? null : horodatage.toInstant();
+	}
+
 
 	/** Le dernier panier, brouillon ou validé : ce que l'écran rouvre. */
 	public Optional<Panier> dernier() {

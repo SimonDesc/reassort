@@ -39,13 +39,14 @@ CREATE TABLE offre (
     UNIQUE (cip13, fournisseur_id)
 );
 
--- Paniers de commande proposés puis validés par le pharmacien
+-- Paniers de commande : proposés, modifiés et validés par le pharmacien, puis reçus fournisseur par fournisseur
 CREATE TABLE panier (
     id             UUID        PRIMARY KEY,
-    statut         VARCHAR(20) NOT NULL CHECK (statut IN ('BROUILLON', 'VALIDE')),
+    statut         VARCHAR(20) NOT NULL CHECK (statut IN ('BROUILLON', 'VALIDE', 'RECU')),
     horizon_jours  INTEGER     NOT NULL CHECK (horizon_jours > 0),
     cree_le        TIMESTAMPTZ NOT NULL,
-    valide_le      TIMESTAMPTZ
+    valide_le      TIMESTAMPTZ,
+    recu_le        TIMESTAMPTZ
 );
 
 CREATE TABLE ligne_panier (
@@ -58,7 +59,9 @@ CREATE TABLE ligne_panier (
     statut_produit       VARCHAR(20) NOT NULL,
     quantite_suggeree    INTEGER     NOT NULL,
     couverture_jours     NUMERIC(6,1),
-    livre_apres_rupture  BOOLEAN     NOT NULL DEFAULT FALSE
+    livre_apres_rupture  BOOLEAN     NOT NULL DEFAULT FALSE,
+    -- Réception des cartons à l'officine : le stock augmente à cette date
+    recue_le             TIMESTAMPTZ
 );
 
 CREATE INDEX ON offre (cip13);
@@ -75,3 +78,15 @@ CREATE TABLE annonce_destockage (
 );
 
 CREATE UNIQUE INDEX ON annonce_destockage (cip13);
+
+-- Réglages de la prévision, modifiables par le pharmacien (une seule ligne)
+CREATE TABLE reglages (
+    id                    SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    jours_historique      INTEGER NOT NULL CHECK (jours_historique BETWEEN 7 AND 90),
+    stock_securite_jours  INTEGER NOT NULL CHECK (stock_securite_jours BETWEEN 0 AND 30),
+    surstock_jours        INTEGER NOT NULL CHECK (surstock_jours BETWEEN 30 AND 365),
+    conserver_jours       INTEGER NOT NULL CHECK (conserver_jours BETWEEN 7 AND 365),
+    CHECK (conserver_jours <= surstock_jours)
+);
+
+INSERT INTO reglages (jours_historique, stock_securite_jours, surstock_jours, conserver_jours) VALUES (28, 3, 90, 60);
