@@ -1,36 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PillIcon, RotateCcwIcon } from 'lucide-react'
+import { PackageOpenIcon, PillIcon, RotateCcwIcon, ShoppingCartIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import { api } from '@/api'
+import { formaterHeure, formaterJour } from '@/format'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Panel } from '@/components/service-ui/panel'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Commander } from '@/ecrans/Commander'
+import { Destocker } from '@/ecrans/Destocker'
 
-type Resume = {
-  produits: number
-  fournisseurs: number
-  offres: number
-  premiereVente: string | null
-  derniereVente: string | null
-  stockReleveLe: string | null
-}
-
-const jour = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' })
-const heure = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' })
-
-async function appeler<T>(url: string, init?: RequestInit): Promise<T> {
-  const reponse = await fetch(url, init)
-  if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`)
-  return (await reponse.json()) as T
-}
-
-/** Coque de l'application ; le tableau des ruptures et le panier arrivent aux lots 3 à 5. */
+/** Coque : la pharmacie de démonstration, ses données, et les deux faces de la marketplace. */
 export function App() {
   const client = useQueryClient()
-  const resume = useQuery({ queryKey: ['resume'], queryFn: () => appeler<Resume>('/api/demo/resume') })
+  const resume = useQuery({ queryKey: ['resume'], queryFn: api.resume })
   const reinitialiser = useMutation({
-    mutationFn: () => appeler<Resume>('/api/demo/reinitialiser', { method: 'POST' }),
-    onSuccess: (donnees) => {
-      client.setQueryData(['resume'], donnees)
+    mutationFn: api.reinitialiser,
+    onSuccess: () => {
+      client.invalidateQueries()
       toast.success('Démo réinitialisée')
     },
   })
@@ -45,7 +30,15 @@ export function App() {
             </div>
             <div>
               <p className="texte-titre">Réassort</p>
-              <p className="texte-meta">Pharmacie de démonstration</p>
+              <p className="texte-meta">
+                Pharmacie de démonstration
+                {resume.data?.premiereVente && resume.data.derniereVente && resume.data.stockReleveLe && (
+                  <span className="hidden sm:inline">
+                    {' '}· {resume.data.produits} produits · ventes du {formaterJour(resume.data.premiereVente)} au{' '}
+                    {formaterJour(resume.data.derniereVente)} · stock relevé à {formaterHeure(resume.data.stockReleveLe)}
+                  </span>
+                )}
+              </p>
             </div>
           </div>
           <Button variant="discret" size="sm" onClick={() => reinitialiser.mutate()} disabled={reinitialiser.isPending}>
@@ -55,43 +48,26 @@ export function App() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 p-4 sm:p-8">
-        <Panel className="page-enter p-carte">
-          {resume.isPending ? (
-            <Skeleton className="h-5 w-96 max-w-full" />
-          ) : resume.isError ? (
-            <p className="texte-donnee text-destructive">Le serveur ne répond pas.</p>
-          ) : (
-            <ResumeDonnees resume={resume.data} />
-          )}
-        </Panel>
+      <main className="mx-auto w-full max-w-6xl p-4 sm:p-8">
+        <Tabs defaultValue="commander" className="gap-6">
+          <TabsList variant="line">
+            <TabsTrigger value="commander" className="px-3">
+              <ShoppingCartIcon data-icon="inline-start" />
+              Commander
+            </TabsTrigger>
+            <TabsTrigger value="destocker" className="px-3">
+              <PackageOpenIcon data-icon="inline-start" />
+              Déstocker
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="commander">
+            <Commander />
+          </TabsContent>
+          <TabsContent value="destocker">
+            <Destocker />
+          </TabsContent>
+        </Tabs>
       </main>
-    </div>
-  )
-}
-
-function ResumeDonnees({ resume }: { resume: Resume }) {
-  const { produits, fournisseurs, offres, premiereVente, derniereVente, stockReleveLe } = resume
-  return (
-    <dl className="flex flex-wrap gap-x-8 gap-y-3">
-      <Propriete intitule="Produits suivis" valeur={String(produits)} />
-      {premiereVente && derniereVente && (
-        <Propriete
-          intitule="Ventes analysées"
-          valeur={`du ${jour.format(new Date(premiereVente))} au ${jour.format(new Date(derniereVente))}`}
-        />
-      )}
-      {stockReleveLe && <Propriete intitule="Stock relevé" valeur={`aujourd'hui à ${heure.format(new Date(stockReleveLe))}`} />}
-      <Propriete intitule="Offres de la marketplace" valeur={`${offres} chez ${fournisseurs} fournisseurs`} />
-    </dl>
-  )
-}
-
-function Propriete({ intitule, valeur }: { intitule: string; valeur: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <dt className="texte-intitule">{intitule}</dt>
-      <dd className="texte-valeur tabular">{valeur}</dd>
     </div>
   )
 }
