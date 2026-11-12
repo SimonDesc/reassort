@@ -22,7 +22,7 @@ class CalculPrevisionTest {
 
 	/** 56 ventes sur 28 jours : 2 par jour. */
 	static Prevision prevoir(int stock, Integer delai) {
-		return CalculPrevision.calculer(new Entree("3400999000017", "Paracétamol", stock, 56, delai), PARAMETRES, AUJOURDHUI);
+		return CalculPrevision.calculer(new Entree("3400999000017", "Paracétamol", stock, 56, 0, delai), PARAMETRES, AUJOURDHUI);
 	}
 
 	@Test
@@ -58,13 +58,32 @@ class CalculPrevisionTest {
 	}
 
 	@Test
+	void uneCommandeEnCoursQuiCouvreLeBesoinPasseLeProduitEnCommande() {
+		// besoin 22, stock 5, 17 déjà commandés : plus rien à proposer
+		Prevision prevision = CalculPrevision.calculer(
+				new Entree("3400999000017", "Paracétamol", 5, 56, 17, 1), PARAMETRES, AUJOURDHUI);
+
+		assertThat(prevision.statut()).isEqualTo(Statut.COMMANDE);
+		assertThat(prevision.quantiteSuggeree()).isZero();
+	}
+
+	@Test
+	void uneCommandeEnCoursPartielleReduitLaQuantiteSuggeree() {
+		Prevision prevision = CalculPrevision.calculer(
+				new Entree("3400999000017", "Paracétamol", 5, 56, 10, 1), PARAMETRES, AUJOURDHUI);
+
+		assertThat(prevision.statut()).isEqualTo(Statut.RUPTURE_IMMINENTE);
+		assertThat(prevision.quantiteSuggeree()).isEqualTo(7);
+	}
+
+	@Test
 	void unProduitBienCouvertNeSuggereRien() {
 		assertThat(prevoir(100, 1).quantiteSuggeree()).isZero();
 	}
 
 	@Test
 	void unProduitSansVenteNEstJamaisEnRupture() {
-		Prevision prevision = CalculPrevision.calculer(new Entree("3400999000017", "Bandes", 0, 0, 1), PARAMETRES, AUJOURDHUI);
+		Prevision prevision = CalculPrevision.calculer(new Entree("3400999000017", "Bandes", 0, 0, 0, 1), PARAMETRES, AUJOURDHUI);
 
 		assertThat(prevision.statut()).isEqualTo(Statut.OK);
 		assertThat(prevision.couvertureJours()).isNull();

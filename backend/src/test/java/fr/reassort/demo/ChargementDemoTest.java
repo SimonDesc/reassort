@@ -25,7 +25,7 @@ class ChargementDemoTest {
 		DemoController.Resume resume = api().get().uri("/api/demo/resume").retrieve().body(DemoController.Resume.class);
 
 		assertThat(resume.produits()).isEqualTo(40);
-		assertThat(resume.fournisseurs()).isEqualTo(3);
+		assertThat(resume.fournisseurs()).isEqualTo(4);
 		assertThat(resume.offres()).isGreaterThan(40);
 		assertThat(resume.derniereVente()).isEqualTo(LocalDate.now(ReassortApplication.FUSEAU).minusDays(1));
 		assertThat(resume.premiereVente()).isEqualTo(resume.derniereVente().minusDays(89));

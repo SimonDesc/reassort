@@ -51,7 +51,10 @@ public class ChargementDemo {
 		jdbc.execute("TRUNCATE ligne_panier, panier, offre, fournisseur, vente, stock, produit");
 
 		DonneesOfficine donnees = officine.lire();
-		List<VenteDuJour> ventes = recalerSurHier(donnees.ventes());
+		long decalage = decalageVersHier(donnees.ventes());
+		List<VenteDuJour> ventes = donnees.ventes().stream()
+				.map(v -> new VenteDuJour(v.jour().plusDays(decalage), v.cip13(), v.quantite()))
+				.toList();
 		Timestamp releve = Timestamp.from(horloge.instant());
 
 		jdbc.batchUpdate("INSERT INTO produit (cip13, libelle) VALUES (?, ?)", donnees.stock(), 500,
@@ -83,28 +86,29 @@ public class ChargementDemo {
 				});
 
 		var offres = LecteurCsv.lire(new ClassPathResource(DOSSIER + "offres.csv"),
-				List.of("cip13", "fournisseur", "prix_unitaire", "delai_jours", "colisage"), v -> v);
+				List.of("cip13", "fournisseur", "prix_unitaire", "delai_jours", "colisage", "quantite_disponible", "peremption"),
+				v -> v);
 		jdbc.batchUpdate("""
-				INSERT INTO offre (cip13, fournisseur_id, prix_unitaire, delai_jours, colisage)
-				VALUES (?, ?, ?, ?, ?)""", offres, 500,
+				INSERT INTO offre (cip13, fournisseur_id, prix_unitaire, delai_jours, colisage, quantite_disponible, peremption)
+				VALUES (?, ?, ?, ?, ?, ?, ?)""", offres, 500,
 				(ps, v) -> {
 					ps.setString(1, v[0]);
 					ps.setString(2, v[1]);
 					ps.setBigDecimal(3, new BigDecimal(v[2]));
 					ps.setInt(4, Integer.parseInt(v[3]));
 					ps.setInt(5, Integer.parseInt(v[4]));
+					ps.setObject(6, v[5].isEmpty() ? null : Integer.valueOf(v[5]));
+					// Les péremptions des lots se décalent avec les ventes : la démo garde les mêmes écarts.
+					ps.setObject(7, v[6].isEmpty() ? null : LocalDate.parse(v[6]).plusDays(decalage));
 				});
 
 		LOG.info("Démo chargée : {} produits, {} lignes de ventes, {} fournisseurs, {} offres",
 				donnees.stock().size(), ventes.size(), fournisseurs.size(), offres.size());
 	}
 
-	private List<VenteDuJour> recalerSurHier(List<VenteDuJour> ventes) {
+	private long decalageVersHier(List<VenteDuJour> ventes) {
 		LocalDate hier = LocalDate.now(horloge).minusDays(1);
 		LocalDate derniere = ventes.stream().map(VenteDuJour::jour).max(Comparator.naturalOrder()).orElse(hier);
-		long decalage = ChronoUnit.DAYS.between(derniere, hier);
-		return ventes.stream()
-				.map(v -> new VenteDuJour(v.jour().plusDays(decalage), v.cip13(), v.quantite()))
-				.toList();
+		return ChronoUnit.DAYS.between(derniere, hier);
 	}
 }

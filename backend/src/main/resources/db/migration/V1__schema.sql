@@ -18,11 +18,11 @@ CREATE TABLE vente (
     PRIMARY KEY (cip13, jour)
 );
 
--- Catalogue de la marketplace
+-- Catalogue de la marketplace : fournisseurs classiques et pharmacies qui déstockent
 CREATE TABLE fournisseur (
     id      VARCHAR(40)   PRIMARY KEY,
     nom     VARCHAR(120)  NOT NULL,
-    type    VARCHAR(20)   NOT NULL CHECK (type IN ('GROSSISTE', 'DEPOSITAIRE', 'LABORATOIRE')),
+    type    VARCHAR(20)   NOT NULL CHECK (type IN ('GROSSISTE', 'DEPOSITAIRE', 'LABORATOIRE', 'CONFRERE')),
     franco  NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (franco >= 0)
 );
 
@@ -33,6 +33,9 @@ CREATE TABLE offre (
     prix_unitaire   NUMERIC(10,2) NOT NULL CHECK (prix_unitaire > 0),
     delai_jours     INTEGER       NOT NULL CHECK (delai_jours >= 0),
     colisage        INTEGER       NOT NULL DEFAULT 1 CHECK (colisage > 0),
+    -- Offres de déstockage d'un confrère : un lot limité, avec sa date de péremption
+    quantite_disponible  INTEGER  CHECK (quantite_disponible > 0),
+    peremption           DATE,
     UNIQUE (cip13, fournisseur_id)
 );
 
@@ -50,7 +53,12 @@ CREATE TABLE ligne_panier (
     panier_id      UUID          NOT NULL REFERENCES panier ON DELETE CASCADE,
     offre_id       BIGINT        NOT NULL REFERENCES offre,
     quantite       INTEGER       NOT NULL CHECK (quantite > 0),
-    prix_unitaire  NUMERIC(10,2) NOT NULL
+    prix_unitaire  NUMERIC(10,2) NOT NULL,
+    -- Pourquoi cette ligne : ce que disait la prévision au moment de la proposition
+    statut_produit       VARCHAR(20) NOT NULL,
+    quantite_suggeree    INTEGER     NOT NULL,
+    couverture_jours     NUMERIC(6,1),
+    livre_apres_rupture  BOOLEAN     NOT NULL DEFAULT FALSE
 );
 
 CREATE INDEX ON offre (cip13);

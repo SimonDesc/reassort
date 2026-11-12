@@ -45,6 +45,11 @@ public class PrevisionService {
 				SELECT p.cip13, p.libelle, s.quantite AS stock,
 				       coalesce((SELECT sum(v.quantite) FROM vente v
 				                 WHERE v.cip13 = p.cip13 AND v.jour >= :debut AND v.jour < :aujourdhui), 0) AS ventes,
+				       coalesce((SELECT sum(l.quantite) FROM ligne_panier l
+				                 JOIN panier pa ON pa.id = l.panier_id
+				                 JOIN offre o ON o.id = l.offre_id
+				                 WHERE o.cip13 = p.cip13 AND pa.statut = 'VALIDE'
+				                   AND CAST(pa.valide_le AT TIME ZONE 'Europe/Paris' AS DATE) + o.delai_jours >= :aujourdhui), 0) AS en_commande,
 				       (SELECT min(o.delai_jours) FROM offre o WHERE o.cip13 = p.cip13) AS delai
 				FROM produit p
 				JOIN stock s ON s.cip13 = p.cip13
@@ -56,6 +61,7 @@ public class PrevisionService {
 						rs.getString("libelle"),
 						rs.getInt("stock"),
 						rs.getInt("ventes"),
+						rs.getInt("en_commande"),
 						rs.getObject("delai", Integer.class)))
 				.list();
 

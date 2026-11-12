@@ -24,8 +24,9 @@ public final class CalculPrevision {
 	private CalculPrevision() {
 	}
 
+	/** Du plus urgent au moins urgent : l'ordre sert au tri. */
 	public enum Statut {
-		RUPTURE_IMMINENTE, A_COMMANDER, OK
+		RUPTURE_IMMINENTE, A_COMMANDER, COMMANDE, OK
 	}
 
 	public record Parametres(int joursHistorique, int stockSecuriteJours, int horizonJours) {
@@ -36,14 +37,19 @@ public final class CalculPrevision {
 		}
 	}
 
-	/** Ce que l'on sait d'un produit : son stock, ses ventes récentes, le délai de sa meilleure offre (null : aucune). */
-	public record Entree(String cip13, String libelle, int stock, int ventesSurHistorique, Integer delaiLePlusCourt) {
+	/**
+	 * Ce que l'on sait d'un produit : son stock, ses ventes récentes, ce qui est déjà commandé et pas encore livré, le
+	 * délai de sa meilleure offre (null : aucune).
+	 */
+	public record Entree(String cip13, String libelle, int stock, int ventesSurHistorique, int enCommande,
+			Integer delaiLePlusCourt) {
 	}
 
 	public record Prevision(
 			String cip13,
 			String libelle,
 			int stock,
+			int enCommande,
 			double venteMoyenneParJour,
 			Double couvertureJours,
 			LocalDate ruptureEstimeeLe,
@@ -56,7 +62,7 @@ public final class CalculPrevision {
 		double moyenne = (double) produit.ventesSurHistorique() / parametres.joursHistorique();
 		if (moyenne == 0) {
 			// Produit sans vente sur la période : rien ne s'écoule, rien à commander.
-			return new Prevision(produit.cip13(), produit.libelle(), produit.stock(), 0, null, null,
+			return new Prevision(produit.cip13(), produit.libelle(), produit.stock(), produit.enCommande(), 0, null, null,
 					produit.delaiLePlusCourt(), Statut.OK, 0);
 		}
 
@@ -70,10 +76,18 @@ public final class CalculPrevision {
 				: couverture < seuilCommande ? Statut.A_COMMANDER
 				: Statut.OK;
 
-		int quantite = statut == Statut.OK ? 0
-				: Math.max(0, (int) Math.ceil(moyenne * seuilCommande) - produit.stock());
+		int besoin = (int) Math.ceil(moyenne * seuilCommande);
+		int quantite = 0;
+		if (statut != Statut.OK) {
+			// Ce qui est déjà commandé compte : on ne repropose pas ce que le pharmacien vient de valider.
+			quantite = Math.max(0, besoin - produit.stock() - produit.enCommande());
+			if (quantite == 0) {
+				statut = Statut.COMMANDE;
+			}
+		}
 
-		return new Prevision(produit.cip13(), produit.libelle(), produit.stock(), arrondi(moyenne), arrondi(couverture),
+		return new Prevision(produit.cip13(), produit.libelle(), produit.stock(), produit.enCommande(), arrondi(moyenne),
+				arrondi(couverture),
 				aujourdhui.plusDays((long) Math.floor(couverture)), produit.delaiLePlusCourt(), statut, quantite);
 	}
 

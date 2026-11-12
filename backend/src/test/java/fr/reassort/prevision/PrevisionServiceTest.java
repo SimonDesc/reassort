@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +18,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import fr.reassort.PostgresEmbarque;
+import fr.reassort.demo.ChargementDemo;
 import fr.reassort.prevision.CalculPrevision.Prevision;
 import fr.reassort.prevision.CalculPrevision.Statut;
 
@@ -28,8 +30,17 @@ class PrevisionServiceTest {
 	@Autowired
 	PrevisionService service;
 
+	@Autowired
+	ChargementDemo demo;
+
 	@LocalServerPort
 	int port;
+
+	/** La base est partagée entre classes de test : repartir de la démo, sans panier validé. */
+	@BeforeEach
+	void rechargerLaDemo() {
+		demo.reinitialiser();
+	}
 
 	@Test
 	void laDemoMontreDesRupturesDesProduitsACommanderEtDesProduitsCouverts() {

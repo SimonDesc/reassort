@@ -3,7 +3,7 @@ Génère le jeu de démonstration de Réassort dans backend/src/main/resources/d
 
 Données fictives, reproductibles (graine fixe) :
 - stock.csv et ventes.csv : ce qu'exporterait le logiciel de gestion d'officine (LGO) ;
-- fournisseurs.csv et offres.csv : le catalogue de la marketplace.
+- fournisseurs.csv et offres.csv : le catalogue de la marketplace, dont les lots qu'un confrère déstocke.
 
 Les codes CIP13 commencent par 3400999 : ils sont fictifs. Les ventes finissent le 2026-11-11 ;
 au chargement, l'application les recale pour qu'elles finissent la veille du jour courant.
@@ -28,6 +28,21 @@ FOURNISSEURS = [
     ("repartiteur-garonne", "Répartiteur Garonne", "GROSSISTE", 0),
     ("depositaire-sud-ouest", "Dépositaire Sud-Ouest", "DEPOSITAIRE", 150),
     ("labo-direct-occitanie", "Labo Direct Occitanie", "LABORATOIRE", 300),
+    ("confrere-toulouse-nord", "Confrère · Toulouse Nord (déstockage)", "CONFRERE", 0),
+]
+
+# Lots de déstockage d'un confrère : rang du produit, part du prix grossiste, quantité disponible, mois avant péremption.
+# Un lot trop petit et une péremption trop proche montrent les deux cas où l'offre est écartée.
+DESTOCKAGE = [
+    (2, 0.62, 60, 9),     # Paracétamol 500 mg
+    (7, 0.58, 50, 7),     # Carbocistéine sirop
+    (11, 0.66, 30, 11),   # Spray nasal eau de mer
+    (15, 0.6, 4, 8),      # Lopéramide : lot trop petit pour le besoin
+    (25, 0.64, 40, 10),   # Atorvastatine
+    (30, 0.55, 20, 2),    # Salbutamol : péremption trop proche
+    (39, 0.6, 30, 6),     # Baume à lèvres
+    (3, 0.7, 24, 12),     # Ibuprofène 400 mg (déjà bien couvert)
+    (38, 0.57, 12, 5),    # Crème émolliente (déjà bien couverte)
 ]
 
 # libellé, prix grossiste (€ HT), ventes moyennes par jour ouvré, saisonnier (hiver), profil de stock
@@ -151,10 +166,14 @@ def main() -> None:
 
     with open(SORTIE / "offres.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f, delimiter=";", lineterminator="\n")
-        w.writerow(["cip13", "fournisseur", "prix_unitaire", "delai_jours", "colisage"])
-        w.writerows(offres)
+        w.writerow(["cip13", "fournisseur", "prix_unitaire", "delai_jours", "colisage", "quantite_disponible", "peremption"])
+        w.writerows(o + ("", "") for o in offres)
+        for rang, part, quantite, mois in DESTOCKAGE:
+            prix = PRODUITS[rang - 1][1]
+            peremption = FIN + timedelta(days=30 * mois)
+            w.writerow((cip13(rang), "confrere-toulouse-nord", f"{prix * part:.2f}", 2, 1, quantite, peremption.isoformat()))
 
-    print(f"{len(stock)} produits, {len(ventes)} lignes de ventes, {len(offres)} offres -> {SORTIE}")
+    print(f"{len(stock)} produits, {len(ventes)} lignes de ventes, {len(offres) + len(DESTOCKAGE)} offres -> {SORTIE}")
 
 
 if __name__ == "__main__":
