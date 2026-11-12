@@ -116,7 +116,7 @@ def main() -> None:
     jours = [FIN - timedelta(days=n) for n in range(JOURS - 1, -1, -1)]
 
     with open(SORTIE / "fournisseurs.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f, delimiter=";")
+        w = csv.writer(f, delimiter=";", lineterminator="\n")
         w.writerow(["id", "nom", "type", "franco"])
         for fournisseur in FOURNISSEURS:
             w.writerow(fournisseur)
@@ -140,17 +140,17 @@ def main() -> None:
             offres.append((code, "labo-direct-occitanie", f"{prix * random.uniform(0.78, 0.86):.2f}", random.choice([5, 6, 7]), random.choice([6, 10, 12])))
 
     with open(SORTIE / "stock.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f, delimiter=";")
+        w = csv.writer(f, delimiter=";", lineterminator="\n")
         w.writerow(["cip13", "libelle", "stock"])
         w.writerows(stock)
 
     with open(SORTIE / "ventes.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f, delimiter=";")
+        w = csv.writer(f, delimiter=";", lineterminator="\n")
         w.writerow(["date", "cip13", "quantite"])
         w.writerows(ventes)
 
     with open(SORTIE / "offres.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f, delimiter=";")
+        w = csv.writer(f, delimiter=";", lineterminator="\n")
         w.writerow(["cip13", "fournisseur", "prix_unitaire", "delai_jours", "colisage"])
         w.writerows(offres)
 
