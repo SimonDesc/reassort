@@ -5,12 +5,12 @@ services:
   app:
     build: .
     environment:
-      SERVICE_URL_APP_8080: ${SERVICE_URL_APP_8080:-}
-      DB_URL: jdbc:postgresql://postgres:5432/reassort
-      DB_USER: reassort
-      DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES:?SERVICE_PASSWORD_POSTGRES manquant}
+      - SERVICE_URL_APP_8080
+      - DB_URL=jdbc:postgresql://postgres:5432/reassort
+      - DB_USER=reassort
+      - DB_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
       # Jeton exigé par le serveur MCP (/mcp) ; vide, l'accès reste ouvert (développement local uniquement).
-      REASSORT_MCP_JETON: ${SERVICE_PASSWORD_64_MCP:-}
+      - REASSORT_MCP_JETON=${SERVICE_PASSWORD_64_MCP}
     # Pas de port publié : le proxy de Coolify sert l'application en HTTPS.
     expose:
       - "8080"
@@ -23,7 +23,7 @@ services:
     environment:
       POSTGRES_DB: reassort
       POSTGRES_USER: reassort
-      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES:?SERVICE_PASSWORD_POSTGRES manquant}
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
     volumes:
       - donnees:/var/lib/postgresql/data
     healthcheck:
