@@ -63,9 +63,7 @@ export function FenetrePanier({ panier: propose, onFermer }: { panier: Panier; o
         <DialogHeader>
           <DialogTitle className="texte-section">{brouillon ? 'Panier proposé' : 'Commande validée'}</DialogTitle>
           <DialogDescription>
-            {pluriel(panier.nombreLignes, 'produit')} · {pluriel(panier.commandes.length, 'fournisseur')} · pour tenir{' '}
-            {panier.horizonJours} jours
-            {brouillon && ' · modifiez les quantités ou le fournisseur avant de valider'}
+            {pluriel(panier.nombreLignes, 'produit')} · {pluriel(panier.commandes.length, 'fournisseur')} · couverture {panier.horizonJours} jours
           </DialogDescription>
         </DialogHeader>
 
@@ -74,7 +72,7 @@ export function FenetrePanier({ panier: propose, onFermer }: { panier: Panier; o
             <div className="flex items-center gap-3 text-st-ok">
               <AnimatedCheck className="size-8" />
               <p className="texte-valeur text-st-ok">
-                Commandes transmises aux fournisseurs. Réceptionnez-les dans « Commandes » à l’arrivée des cartons.
+                Commandes transmises aux fournisseurs.
               </p>
             </div>
           )}

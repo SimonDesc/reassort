@@ -4,7 +4,7 @@ import { RotateCcwIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, type Reglages } from '@/api'
 import { formaterDate } from '@/format'
-import { EnteteEcran } from '@/components/entete'
+import { PageEcran } from '@/components/liste'
 import { Panel } from '@/components/service-ui/panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,8 +23,7 @@ const CHAMPS: { cle: keyof Reglages; libelle: string; aide: string; min: number;
 export function ReglagesEcran() {
   const reglages = useQuery({ queryKey: ['reglages'], queryFn: api.reglages })
   return (
-    <div className="page-enter">
-      <EnteteEcran titre="Réglages" sousTitre="Les règles de calcul des prévisions et du déstockage." />
+    <PageEcran titre="Réglages">
       {reglages.isPending ? (
         <Skeleton className="h-80" />
       ) : reglages.isError ? (
@@ -33,7 +32,7 @@ export function ReglagesEcran() {
         <Formulaire key={JSON.stringify(reglages.data)} initial={reglages.data} />
       )}
       <Demo />
-    </div>
+    </PageEcran>
   )
 }
 

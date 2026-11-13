@@ -29,6 +29,15 @@
     --color-st-rupture: var(--st-rupture);
     --color-st-commande: var(--st-commande);
 
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
@@ -102,6 +111,19 @@
     --chart-1: #02985f;
     --chart-2: #3f4c9c;
     --chart-3: oklch(0.62 0.15 60);
+
+    /* Barre latérale (structure Service-9000) : fond gris-bleu, entrée active en carte blanche, vert d'action */
+    --sidebar: oklch(0.958 0.008 270);
+    --sidebar-foreground: oklch(0.36 0.04 278);
+    --sidebar-primary: oklch(0.6 0.14 158);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.925 0.014 270);
+    --sidebar-accent-foreground: oklch(0.28 0.11 273);
+    --sidebar-border: oklch(0.9 0.012 270);
+    --sidebar-ring: oklch(0.6 0.14 158);
+
+    /* Hauteur d'une ligne de tableau */
+    --row-h: 2.75rem;
 }
 
 .dark {
@@ -139,6 +161,15 @@
     --chart-1: #22a56a;
     --chart-2: #697eda;
     --chart-3: oklch(0.8 0.13 65);
+
+    --sidebar: oklch(0.16 0.03 275);
+    --sidebar-foreground: oklch(0.8 0.02 275);
+    --sidebar-primary: oklch(0.72 0.15 158);
+    --sidebar-primary-foreground: oklch(0.2 0.04 275);
+    --sidebar-accent: oklch(0.25 0.04 275);
+    --sidebar-accent-foreground: oklch(0.95 0.01 275);
+    --sidebar-border: oklch(1 0 0 / 8%);
+    --sidebar-ring: oklch(0.72 0.15 158);
 }
 
 @layer base {
@@ -228,6 +259,7 @@
   }
   /* Montants et quantités : chiffres tabulaires, alignés à droite dans les tableaux */
   .tabular { font-variant-numeric: tabular-nums; }
+  .h-row { height: var(--row-h); }
 }
 
 /* Marge intérieure d'une carte : 24 px sur une page, 16 px dans une fenêtre (`cartes-etroites`). */

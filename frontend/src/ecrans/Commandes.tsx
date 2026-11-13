@@ -1,178 +1,170 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2Icon, PackageCheckIcon, RecycleIcon, TruckIcon } from 'lucide-react'
+import { PackageCheckIcon, RecycleIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, type CommandeFournisseur, type Panier } from '@/api'
-import { formaterDate, formaterEcheance, formaterEuros, formaterHeure, pluriel } from '@/format'
+import { formaterDate, formaterEcheance, formaterEuros } from '@/format'
 import { useFicheProduit } from '@/navigation'
-import { EnteteEcran } from '@/components/entete'
-import { Panel } from '@/components/service-ui/panel'
+import { BarreListe, ChampRecherche, PageEcran, Segments, Tableau, type Colonne } from '@/components/liste'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TYPES_FOURNISSEUR } from '@/ecrans/FicheProduit'
 
-type Vue = 'en-cours' | 'recues' | 'toutes'
+/** Une commande fournisseur : ce qu'on attend d'un même fournisseur, et qu'on réceptionne d'un coup. */
+type Ligne = { panier: Panier; commande: CommandeFournisseur; prevue: string; cle: string }
+type Vue = 'attente' | 'recues' | 'toutes'
 
-/** L'historique des commandes validées, et la réception des cartons qui remonte le stock. */
+const prevueLe = (c: CommandeFournisseur) => c.lignes.reduce((max, l) => (l.livraisonPrevueLe > max ? l.livraisonPrevueLe : max), '')
+
 export function Commandes() {
-  const [vue, setVue] = useState<Vue>('en-cours')
-  const historique = useQuery({ queryKey: ['historique'], queryFn: api.historique })
-  const liste = historique.data ?? []
-  const enCours = liste.filter((p) => p.statut === 'VALIDE')
-  const visibles = vue === 'toutes' ? liste : vue === 'en-cours' ? enCours : liste.filter((p) => p.statut === 'RECU')
-  const montantEnCours = enCours.reduce((a, p) => a + p.total, 0)
-
-  return (
-    <div className="page-enter">
-      <EnteteEcran
-        titre="Commandes"
-        sousTitre={
-          historique.data &&
-          (enCours.length
-            ? `${pluriel(enCours.length, 'commande')} en attente de livraison · ${formaterEuros(montantEnCours)} HT`
-            : 'Aucune livraison attendue')
-        }
-        actions={
-          <Tabs value={vue} onValueChange={(v) => setVue(v as Vue)}>
-            <TabsList aria-label="Commandes affichées">
-              <TabsTrigger value="en-cours" className="px-3">En cours · {enCours.length}</TabsTrigger>
-              <TabsTrigger value="recues" className="px-3">Reçues</TabsTrigger>
-              <TabsTrigger value="toutes" className="px-3">Toutes</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        }
-      />
-
-      {historique.isPending ? (
-        <div className="flex flex-col gap-4">
-          {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-40" />)}
-        </div>
-      ) : historique.isError ? (
-        <p className="texte-donnee text-destructive">{historique.error.message}</p>
-      ) : visibles.length === 0 ? (
-        <Panel className="items-center gap-2 p-carte py-12 text-center">
-          <TruckIcon className="size-6 text-muted-foreground" />
-          <p className="texte-discret">
-            {vue === 'en-cours' ? 'Aucune commande en cours. Préparez un panier depuis « Réassort ».' : 'Aucune commande.'}
-          </p>
-        </Panel>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {visibles.map((panier) => (
-            <CartePanier key={panier.id} panier={panier} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function CartePanier({ panier }: { panier: Panier }) {
+  const { ouvrir: ouvrirFiche } = useFicheProduit()
   const client = useQueryClient()
+  const [vue, setVue] = useState<Vue>('attente')
+  const [recherche, setRecherche] = useState('')
+  const [ouverte, setOuverte] = useState<string | null>(null)
+  const historique = useQuery({ queryKey: ['historique'], queryFn: api.historique })
+
   const recevoir = useMutation({
-    mutationFn: (commande: CommandeFournisseur) => api.recevoir(panier.id, commande.fournisseurId),
-    onSuccess: (_, commande) => {
-      for (const cle of ['historique', 'previsions', 'tableau-de-bord', 'fiche', 'destockage']) {
-        client.invalidateQueries({ queryKey: [cle] })
-      }
-      const boites = commande.lignes.reduce((a, l) => a + l.quantite, 0)
-      toast.success(`${commande.fournisseur} réceptionné : ${boites} boîtes ajoutées au stock`)
+    mutationFn: (l: Ligne) => api.recevoir(l.panier.id, l.commande.fournisseurId),
+    onSuccess: (_, l) => {
+      for (const cle of ['historique', 'previsions', 'tableau-de-bord', 'fiche', 'destockage']) client.invalidateQueries({ queryKey: [cle] })
+      toast.success(`${l.commande.fournisseur} : ${l.commande.lignes.reduce((a, x) => a + x.quantite, 0)} boîtes entrées en stock`)
     },
   })
-  const recues = panier.commandes.filter((c) => c.recueLe).length
 
-  return (
-    <Panel className="gap-4 p-carte">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <h2 className="texte-section flex items-center gap-2">
-            Commande du {panier.valideLe ? formaterDate(panier.valideLe) : formaterDate(panier.creeLe)}
-            {panier.statut === 'RECU' ? (
-              <Badge variant="ok">Reçue</Badge>
-            ) : (
-              <Badge variant="commande">
-                {recues ? `${recues}/${panier.commandes.length} livraisons reçues` : 'En attente de livraison'}
-              </Badge>
-            )}
-          </h2>
-          <p className="texte-meta">
-            {pluriel(panier.nombreLignes, 'produit')} · {pluriel(panier.commandes.length, 'fournisseur')} · réassort {panier.horizonJours} jours
-            {panier.valideLe && ` · validée à ${formaterHeure(panier.valideLe)}`}
-          </p>
-        </div>
-        <p className="texte-valeur tabular">{formaterEuros(panier.total)} HT</p>
-      </div>
-
-      <ul className="flex flex-col divide-y rounded-lg border">
-        {panier.commandes.map((commande) => (
-          <Livraison
-            key={commande.fournisseurId}
-            commande={commande}
-            enCours={recevoir.isPending && recevoir.variables.fournisseurId === commande.fournisseurId}
-            onRecevoir={panier.statut === 'VALIDE' ? () => recevoir.mutate(commande) : undefined}
-          />
-        ))}
-      </ul>
-      {recevoir.isError && <p className="texte-donnee text-destructive">{recevoir.error.message}</p>}
-    </Panel>
+  const toutes: Ligne[] = (historique.data ?? []).flatMap((panier) =>
+    panier.commandes.map((commande) => ({ panier, commande, prevue: prevueLe(commande), cle: `${panier.id}/${commande.fournisseurId}` })),
   )
-}
+  const enAttente = toutes.filter((l) => !l.commande.recueLe)
+  const recues = toutes.filter((l) => l.commande.recueLe)
+  const cherche = recherche.trim().toLowerCase()
+  const visibles = (vue === 'attente' ? enAttente : vue === 'recues' ? recues : toutes).filter(
+    (l) => !cherche || l.commande.fournisseur.toLowerCase().includes(cherche) || l.commande.lignes.some((x) => x.libelle.toLowerCase().includes(cherche)),
+  )
+  const detail = toutes.find((l) => l.cle === ouverte)
 
-function Livraison({ commande, enCours, onRecevoir }: { commande: CommandeFournisseur; enCours: boolean; onRecevoir?: () => void }) {
-  const { ouvrir } = useFicheProduit()
-  const [ouverte, setOuverte] = useState(false)
-  const prevue = commande.lignes.reduce<string | null>((max, l) => (!max || l.livraisonPrevueLe > max ? l.livraisonPrevueLe : max), null)
+  const colonnes: Colonne<Ligne>[] = [
+    {
+      id: 'fournisseur',
+      libelle: 'Fournisseur',
+      rendu: (l) => (
+        <span className="inline-flex items-center gap-1.5">
+          {l.commande.typeFournisseur === 'CONFRERE' && <RecycleIcon className="size-3.5 text-marque" />}
+          {l.commande.fournisseur}
+        </span>
+      ),
+      tri: (l) => l.commande.fournisseur,
+    },
+    { id: 'type', libelle: 'Type', rendu: (l) => TYPES_FOURNISSEUR[l.commande.typeFournisseur], largeur: 190, masqueeSous: 'xl' },
+    { id: 'passee', libelle: 'Passée le', rendu: (l) => (l.panier.valideLe ? formaterDate(l.panier.valideLe) : ''), tri: (l) => l.panier.valideLe, largeur: 120, masqueeSous: 'md' },
+    {
+      id: 'livraison',
+      libelle: 'Livraison',
+      rendu: (l) => (l.commande.recueLe ? `reçue le ${formaterDate(l.commande.recueLe)}` : `prévue ${formaterEcheance(l.prevue)}`),
+      tri: (l) => l.commande.recueLe ?? l.prevue,
+      largeur: 180,
+    },
+    { id: 'produits', libelle: 'Produits', rendu: (l) => l.commande.lignes.length, tri: (l) => l.commande.lignes.length, alignement: 'droite', largeur: 90, masqueeSous: 'sm' },
+    { id: 'montant', libelle: 'Montant HT', rendu: (l) => formaterEuros(l.commande.sousTotal), tri: (l) => l.commande.sousTotal, alignement: 'droite', largeur: 120 },
+    {
+      id: 'etat',
+      libelle: 'État',
+      rendu: (l) =>
+        l.commande.recueLe ? (
+          <Badge variant="ok">Reçue</Badge>
+        ) : (
+          <Button
+            size="xs"
+            variant="outline"
+            disabled={recevoir.isPending}
+            onClick={(e) => {
+              e.stopPropagation()
+              recevoir.mutate(l)
+            }}
+          >
+            {recevoir.isPending && recevoir.variables?.cle === l.cle ? <Spinner data-icon="inline-start" /> : <PackageCheckIcon data-icon="inline-start" />}
+            Réceptionner
+          </Button>
+        ),
+      largeur: 140,
+    },
+  ]
 
   return (
-    <li className="flex flex-col gap-2 px-3 py-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="texte-valeur flex items-center gap-1.5">
-            {commande.typeFournisseur === 'CONFRERE' && <RecycleIcon className="size-3.5 text-marque" />}
-            {commande.fournisseur}
-          </span>
-          <span className="texte-meta">
-            {TYPES_FOURNISSEUR[commande.typeFournisseur]} ·{' '}
-            <Button variant="lien-discret" size="texte" className="text-xs" onClick={() => setOuverte(!ouverte)}>
-              {pluriel(commande.lignes.length, 'produit')}
-            </Button>
-          </span>
-        </div>
-        <span className="texte-donnee tabular">{formaterEuros(commande.sousTotal)}</span>
-        {commande.recueLe ? (
-          <span className="texte-meta flex w-44 items-center justify-end gap-1 text-st-ok">
-            <CheckCircle2Icon className="size-3.5" />
-            reçue le {formaterDate(commande.recueLe)}
-          </span>
-        ) : (
-          <div className="flex w-44 flex-col items-end gap-1">
-            {onRecevoir && (
-              <Button size="sm" variant="outline" onClick={onRecevoir} disabled={enCours}>
-                {enCours ? <Spinner data-icon="inline-start" /> : <PackageCheckIcon data-icon="inline-start" />}
-                Réceptionner
-              </Button>
-            )}
-            {prevue && <span className="texte-meta">attendue {formaterEcheance(prevue)}</span>}
-          </div>
-        )}
-      </div>
-      {ouverte && (
-        <ul className="flex flex-col gap-1 border-l-2 pl-3">
-          {commande.lignes.map((l) => (
-            <li key={l.id} className="flex items-baseline justify-between gap-3">
-              <Button variant="lien-objet" size="texte" className="texte-donnee truncate font-normal" onClick={() => ouvrir(l.cip13)}>
-                {l.libelle}
-              </Button>
-              <span className="texte-meta shrink-0 tabular">
-                {l.quantite} × {formaterEuros(l.prixUnitaire)}
-              </span>
-            </li>
-          ))}
-        </ul>
+    <PageEcran titre="Commandes" nombre={historique.data ? visibles.length : undefined} pleineLargeur>
+      <BarreListe>
+        <ChampRecherche etiquette="Fournisseur ou produit" valeur={recherche} onChange={setRecherche} />
+        <Segments
+          etiquette="Commandes affichées"
+          valeur={vue}
+          onChange={setVue}
+          options={[
+            { valeur: 'attente', libelle: 'En attente', nombre: enAttente.length },
+            { valeur: 'recues', libelle: 'Reçues', nombre: recues.length },
+            { valeur: 'toutes', libelle: 'Toutes', nombre: toutes.length },
+          ]}
+        />
+      </BarreListe>
+      {recevoir.isError && <p className="texte-donnee text-destructive">{recevoir.error.message}</p>}
+      <Tableau
+        libelle="Commandes fournisseurs"
+        colonnes={colonnes}
+        lignes={visibles}
+        idLigne={(l) => l.cle}
+        onOuvrir={(l) => setOuverte(l.cle)}
+        chargement={historique.isPending}
+        erreur={historique.error?.message}
+        vide={vue === 'attente' ? 'Aucune livraison attendue.' : 'Aucune commande.'}
+      />
+
+      {detail && (
+        <Dialog open onOpenChange={(o) => !o && setOuverte(null)}>
+          <DialogContent taille="moyenne">
+            <DialogHeader>
+              <DialogTitle className="texte-section">{detail.commande.fournisseur}</DialogTitle>
+              <DialogDescription>
+                {TYPES_FOURNISSEUR[detail.commande.typeFournisseur]}
+                {detail.panier.valideLe && ` · passée le ${formaterDate(detail.panier.valideLe)}`}
+                {detail.commande.recueLe ? ` · reçue le ${formaterDate(detail.commande.recueLe)}` : ` · livraison prévue ${formaterEcheance(detail.prevue)}`}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogBody className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="texte-intitule pl-4">Produit</TableHead>
+                    <TableHead className="texte-intitule text-right">Quantité</TableHead>
+                    <TableHead className="texte-intitule text-right">Prix unitaire</TableHead>
+                    <TableHead className="texte-intitule pr-4 text-right">Montant</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {detail.commande.lignes.map((x) => (
+                    <TableRow key={x.id} className="h-row cursor-pointer" onClick={() => ouvrirFiche(x.cip13)}>
+                      <TableCell className="texte-donnee pl-4">{x.libelle}</TableCell>
+                      <TableCell className="texte-donnee tabular text-right">{x.quantite}</TableCell>
+                      <TableCell className="texte-donnee tabular text-right">{formaterEuros(x.prixUnitaire)}</TableCell>
+                      <TableCell className="texte-valeur tabular pr-4 text-right">{formaterEuros(x.montant)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </DialogBody>
+            <DialogFooter className="items-center sm:justify-between">
+              <span className="texte-valeur tabular">Total {formaterEuros(detail.commande.sousTotal)} HT</span>
+              {!detail.commande.recueLe && (
+                <Button onClick={() => recevoir.mutate(detail)} disabled={recevoir.isPending}>
+                  <PackageCheckIcon data-icon="inline-start" />
+                  Réceptionner
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
-    </li>
+    </PageEcran>
   )
 }

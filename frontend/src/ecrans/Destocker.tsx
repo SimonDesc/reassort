@@ -1,113 +1,127 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { api, type SuggestionDestockage } from '@/api'
-import { formaterDate, formaterEuros, formaterNombre, pluriel } from '@/format'
-import { Panel } from '@/components/service-ui/panel'
-import { EnteteEcran } from '@/components/entete'
+import { formaterDate, formaterEuros, formaterNombre } from '@/format'
 import { useFicheProduit } from '@/navigation'
+import { BarreListe, ChampRecherche, PageEcran, Segments, Tableau, type Colonne } from '@/components/liste'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { toast } from 'sonner'
 
-/** Ce qui dort dans la pharmacie, proposé aux confrères sur la marketplace. */
+type Vue = 'a-publier' | 'publiees' | 'toutes'
+
+/** Le surstock de l'officine, proposé aux confrères sur la marketplace. */
 export function Destocker() {
   const client = useQueryClient()
+  const { ouvrir } = useFicheProduit()
+  const [vue, setVue] = useState<Vue>('a-publier')
+  const [recherche, setRecherche] = useState('')
   const [aPublier, setAPublier] = useState<SuggestionDestockage | null>(null)
   const suggestions = useQuery({ queryKey: ['destockage'], queryFn: api.suggestionsDestockage })
   const retirer = useMutation({
     mutationFn: api.retirerAnnonce,
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ['destockage'] })
-      toast.success('Annonce retirée')
+      toast.success('Annonce retirée de la marketplace')
     },
   })
 
-  const { ouvrir } = useFicheProduit()
   const liste = suggestions.data ?? []
-  const valeur = liste.reduce((total, s) => total + s.quantiteADestocker * (s.prixConseille ?? 0), 0)
+  const nonPubliees = liste.filter((s) => !s.annonce)
+  const publiees = liste.filter((s) => s.annonce)
+  const cherche = recherche.trim().toLowerCase()
+  const visibles = (vue === 'a-publier' ? nonPubliees : vue === 'publiees' ? publiees : liste).filter(
+    (s) => !cherche || s.libelle.toLowerCase().includes(cherche) || s.cip13.includes(cherche),
+  )
+  const valeur = (s: SuggestionDestockage) => (s.annonce ? s.annonce.montant : s.quantiteADestocker * (s.prixConseille ?? 0))
+
+  const colonnes: Colonne<SuggestionDestockage>[] = [
+    { id: 'produit', libelle: 'Produit', rendu: (s) => s.libelle, tri: (s) => s.libelle },
+    { id: 'stock', libelle: 'Stock', rendu: (s) => s.stock, tri: (s) => s.stock, alignement: 'droite', largeur: 80 },
+    { id: 'ventes', libelle: 'Ventes / j', rendu: (s) => formaterNombre(s.venteMoyenneParJour), tri: (s) => s.venteMoyenneParJour, alignement: 'droite', largeur: 100, masqueeSous: 'md' },
+    {
+      id: 'couverture',
+      libelle: 'Couverture',
+      rendu: (s) => (s.couvertureJours === null ? 'Sans vente' : `${Math.round(s.couvertureJours)} j`),
+      tri: (s) => s.couvertureJours ?? Infinity,
+      alignement: 'droite',
+      largeur: 110,
+    },
+    { id: 'aCeder', libelle: 'À céder', rendu: (s) => <span className="font-semibold text-titre">{s.annonce?.quantite ?? s.quantiteADestocker}</span>, tri: (s) => s.quantiteADestocker, alignement: 'droite', largeur: 90 },
+    {
+      id: 'prix',
+      libelle: 'Prix unitaire',
+      rendu: (s) => (s.annonce ? formaterEuros(s.annonce.prixUnitaire) : s.prixConseille !== null ? formaterEuros(s.prixConseille) : ''),
+      alignement: 'droite',
+      largeur: 120,
+      masqueeSous: 'sm',
+    },
+    { id: 'valeur', libelle: 'Valeur HT', rendu: (s) => formaterEuros(valeur(s)), tri: valeur, alignement: 'droite', largeur: 120 },
+    {
+      id: 'annonce',
+      libelle: 'Annonce',
+      rendu: (s) =>
+        s.annonce ? (
+          <span className="inline-flex items-center gap-1">
+            <Badge variant="ok">Publiée</Badge>
+            <Button
+              variant="discret"
+              size="xs"
+              onClick={(e) => {
+                e.stopPropagation()
+                retirer.mutate(s.annonce!.id)
+              }}
+            >
+              Retirer
+            </Button>
+          </span>
+        ) : (
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={(e) => {
+              e.stopPropagation()
+              setAPublier(s)
+            }}
+          >
+            Publier
+          </Button>
+        ),
+      largeur: 160,
+    },
+  ]
 
   return (
-    <div className="page-enter">
-      <EnteteEcran
-        titre="Déstockage"
-        sousTitre={
-          suggestions.data &&
-          (liste.length === 0
-            ? 'Aucun surstock : rien à déstocker.'
-            : `${pluriel(liste.length, 'produit')} en surstock · environ ${formaterEuros(valeur)} à récupérer en les proposant aux confrères`)
-        }
+    <PageEcran titre="Déstockage" nombre={suggestions.data ? visibles.length : undefined} pleineLargeur>
+      <BarreListe>
+        <ChampRecherche etiquette="Produit ou CIP13" valeur={recherche} onChange={setRecherche} />
+        <Segments
+          etiquette="Annonces affichées"
+          valeur={vue}
+          onChange={setVue}
+          options={[
+            { valeur: 'a-publier', libelle: 'À publier', nombre: nonPubliees.length },
+            { valeur: 'publiees', libelle: 'Publiées', nombre: publiees.length },
+            { valeur: 'toutes', libelle: 'Toutes', nombre: liste.length },
+          ]}
+        />
+      </BarreListe>
+      {retirer.isError && <p className="texte-donnee text-destructive">{retirer.error.message}</p>}
+      <Tableau
+        libelle="Produits en surstock"
+        colonnes={colonnes}
+        lignes={visibles}
+        idLigne={(s) => s.cip13}
+        onOuvrir={(s) => ouvrir(s.cip13)}
+        chargement={suggestions.isPending}
+        erreur={suggestions.error?.message}
+        vide={vue === 'publiees' ? 'Aucune annonce publiée.' : 'Aucun produit en surstock.'}
       />
-      <Panel className="gap-6 p-carte">
-      {suggestions.isPending ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-        </div>
-      ) : suggestions.isError ? (
-        <p className="texte-donnee text-destructive">{suggestions.error.message}</p>
-      ) : (
-        liste.length > 0 && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="texte-intitule">Produit</TableHead>
-                <TableHead className="texte-intitule text-right">Stock</TableHead>
-                <TableHead className="texte-intitule text-right">Couverture</TableHead>
-                <TableHead className="texte-intitule text-right">À déstocker</TableHead>
-                <TableHead className="texte-intitule text-right">Prix conseillé</TableHead>
-                <TableHead className="texte-intitule">Annonce</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {liste.map((s) => (
-                <TableRow key={s.cip13}>
-                  <TableCell className="max-w-80">
-                    <Button variant="lien-objet" size="texte" className="max-w-full truncate" onClick={() => ouvrir(s.cip13)}>
-                      {s.libelle}
-                    </Button>
-                    <p className="texte-meta tabular">{formaterNombre(s.venteMoyenneParJour)} vendus par jour</p>
-                  </TableCell>
-                  <TableCell className="texte-donnee tabular text-right">{s.stock}</TableCell>
-                  <TableCell className="texte-donnee tabular text-right">
-                    {s.couvertureJours === null ? 'Aucune vente' : `${Math.round(s.couvertureJours)} j`}
-                  </TableCell>
-                  <TableCell className="texte-valeur tabular text-right">{s.quantiteADestocker}</TableCell>
-                  <TableCell className="texte-donnee tabular text-right">
-                    {s.prixConseille !== null && formaterEuros(s.prixConseille)}
-                  </TableCell>
-                  <TableCell>
-                    {s.annonce ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="ok">
-                          Publiée · {s.annonce.quantite} × {formaterEuros(s.annonce.prixUnitaire)}
-                        </Badge>
-                        <Button variant="discret" size="xs" onClick={() => setAPublier(s)}>
-                          Modifier
-                        </Button>
-                        <Button variant="discret" size="xs" onClick={() => retirer.mutate(s.annonce!.id)}>
-                          Retirer
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={() => setAPublier(s)}>
-                        Publier
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )
-      )}
-
-      </Panel>
       {aPublier && <FenetrePublication suggestion={aPublier} onFermer={() => setAPublier(null)} />}
-    </div>
+    </PageEcran>
   )
 }
 
@@ -120,12 +134,7 @@ function FenetrePublication({ suggestion, onFermer }: { suggestion: SuggestionDe
 
   const publier = useMutation({
     mutationFn: () =>
-      api.publierAnnonce({
-        cip13: suggestion.cip13,
-        quantite: Number(quantite),
-        prixUnitaire: Number(prix.replace(',', '.')),
-        peremption,
-      }),
+      api.publierAnnonce({ cip13: suggestion.cip13, quantite: Number(quantite), prixUnitaire: Number(prix.replace(',', '.')), peremption }),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ['destockage'] })
       toast.success(`${suggestion.libelle} : annonce publiée`)
@@ -153,8 +162,7 @@ function FenetrePublication({ suggestion, onFermer }: { suggestion: SuggestionDe
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="quantite">Quantité</Label>
-                <Input id="quantite" type="number" min={1} max={suggestion.stock} required value={quantite}
-                  onChange={(e) => setQuantite(e.target.value)} />
+                <Input id="quantite" type="number" min={1} max={suggestion.stock} required value={quantite} onChange={(e) => setQuantite(e.target.value)} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="prix">Prix unitaire HT (€)</Label>
@@ -168,7 +176,7 @@ function FenetrePublication({ suggestion, onFermer }: { suggestion: SuggestionDe
             {publier.isError && <p className="texte-donnee text-destructive">{publier.error.message}</p>}
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={onFermer}>
+            <Button type="button" variant="outline" onClick={onFermer}>
               Annuler
             </Button>
             <Button type="submit" disabled={publier.isPending}>
