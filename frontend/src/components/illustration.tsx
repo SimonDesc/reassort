@@ -39,5 +39,5 @@ export function EtatVide({ nom, children }: { nom: NomIllustration; children: Re
  * (`key`), son animation CSS repart du début.
  */
 export function Logo({ className }: { className?: string }) {
-  return <span className={cn('block [&_svg]:size-full', className)} dangerouslySetInnerHTML={{ __html: logo }} />
+  return <span className={cn('logo-anime block [&_svg]:size-full', className)} dangerouslySetInnerHTML={{ __html: logo }} />
 }

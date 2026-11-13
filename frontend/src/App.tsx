@@ -12,6 +12,7 @@ import {
   TruckIcon,
 } from 'lucide-react'
 import { api } from '@/api'
+import { APropos } from '@/components/a-propos'
 import { Assistant } from '@/components/assistant'
 import { Logo } from '@/components/illustration'
 import { formaterHeure } from '@/format'
@@ -164,6 +165,7 @@ function BarreLaterale() {
       <SidebarFooter>
         <SidebarMenu>
           {ENTREES.filter((e) => e.groupe === 'Paramètres').map(entree)}
+          <APropos />
           <SidebarMenuItem>
             <div className="flex items-center gap-2 rounded-md p-2 group-data-[collapsible=icon]:hidden">
               <div className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">

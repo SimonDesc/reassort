@@ -29,13 +29,13 @@ Ce sont les deux faces d'une même marketplace : le lot qu'une pharmacie publie 
 | Écran | Ce qu'on y fait |
 |---|---|
 | **Tableau de bord** | Valeur du stock, surstock immobilisé, commandes en cours, économies sur 90 jours face au grossiste seul ; état du stock par statut ; ventes par semaine ; achats par fournisseur ; produits à traiter en priorité. |
-| **Réassort** | Liste filtrable (statut, recherche par nom ou CIP13), horizon de commande, préparation et édition du panier. |
+| **Réassort** | Prévisions et panier sur le même écran : pour chaque produit, la quantité à commander (au colis près), le fournisseur et le montant ; en bas, le franco par fournisseur, le total et la validation. Un produit couvert s'ajoute d'un clic. |
 | **Fiche produit** | S'ouvre depuis n'importe quel écran : ventes jour par jour sur 90 jours, stock prévu sur 30 jours (livraisons attendues comprises), offres comparées, commandes en cours. |
 | **Commandes** | Historique et réception par fournisseur. |
 | **Déstockage** | Produits en surstock, quantité à céder, publication des annonces. |
 | **Réglages** | Historique de ventes, stock de sécurité, seuil de surstock, stock à conserver ; réinitialisation de la démo. |
 
-Un parcours de deux minutes : *Réassort* → *Préparer le panier* → passer une ligne chez un autre fournisseur → *Valider et commander* → *Commandes* → *Réceptionner* → retour au *Tableau de bord*, où la rupture a disparu.
+Un parcours de deux minutes : *Réassort* → ajuster une quantité, passer une ligne chez un autre fournisseur → *Valider et commander* → *Commandes* → *Réceptionner* → retour au *Tableau de bord*, où la rupture a disparu.
 
 ## Les règles de calcul
 
@@ -68,7 +68,7 @@ On peut alors demander « *Qu'est-ce que je dois commander pour la semaine ?* »
 | **Back** | Java 21, Spring Boot 4, Spring JDBC (`JdbcClient`, du SQL lisible plutôt qu'un ORM), Flyway, PostgreSQL 17, erreurs au format Problem Details |
 | **MCP** | Spring AI 2 (`@McpTool`), transport HTTP « streamable » |
 | **Front** | React 19, TypeScript, Vite, Tailwind 4, composants shadcn/ui, TanStack Query, Recharts |
-| **Tests** | 70 tests JUnit sur un vrai PostgreSQL embarqué (aucune base à installer), dont un client MCP de bout en bout |
+| **Tests** | 75 tests JUnit sur un vrai PostgreSQL embarqué (aucune base à installer), dont un client MCP de bout en bout |
 | **Livraison** | Une image Docker (le front est servi par Spring Boot), `docker-compose.yml` avec la base, déployée par Coolify sur un VPS ; CI GitHub Actions |
 
 Le code est organisé par domaine métier (`prevision`, `panier`, `destockage`, `produit`, `reglages`, `mcp`), pas par couche technique. Le calcul de prévision et le choix de l'offre sont des fonctions pures, testées sans base.
@@ -98,3 +98,14 @@ cd frontend && npm install && npm run dev
 ```
 
 Le front est sur http://localhost:5173, l'API sur http://localhost:8080. Les tests : `cd backend && ./mvnw verify`.
+
+## Auteur
+
+**Simon Descombes**, lead développeur full stack à Toulouse.
+
+Plus de 10 ans dans le logiciel métier : dix ans à déployer et former sur une GMAO chez des centaines de clients (Carrefour, Système U, Eiffage…), puis développeur après la formation Holberton School (titre RNCP niveau 6, 2023-2024). Aujourd'hui, je pilote la modernisation des produits de Technic-Soft : application mobile réécrite en PWA React / Capacitor pour plus de 2 000 techniciens, migration d'un client lourd C++ de plus de 7 000 utilisateurs vers React / Symfony, RAG sur l'historique des réparations, GitLab et CI/CD montés de zéro, serveurs MCP internes. J'encadre une équipe de 2 à 4 développeurs et je code au quotidien avec des agents IA.
+
+J'ai construit Réassort pour la candidature au poste de développeur fullstack du **Comptoir des Pharmacies**, sur le périmètre de l'offre : « du catalogue produits à la réception des cartons à l'officine, en passant par la publication d'offres et le process d'achat ». Même façon de travailler que celle décrite : comprendre le besoin métier avant d'écrire du code, back en Java / Spring Boot, front React / TypeScript, tests automatisés, conteneurisation et déploiement, agents IA dirigés et relus, serveur MCP.
+
+- Email : [pro.descombes@gmail.com](mailto:pro.descombes@gmail.com)
+- GitHub : [github.com/SimonDesc](https://github.com/SimonDesc)

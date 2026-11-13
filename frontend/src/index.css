@@ -328,4 +328,8 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  /* Exception voulue : le logo joue son effet même quand les animations sont réduites (une seule lecture, 2,2 s). */
+  .logo-anime .rs-a {
+    animation-duration: 2.2s !important;
+  }
 }
