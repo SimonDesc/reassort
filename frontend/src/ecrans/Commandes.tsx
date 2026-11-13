@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TYPES_FOURNISSEUR } from '@/ecrans/FicheProduit'
 import { EtatVide } from '@/components/illustration'
+import { NomProduit } from '@/components/produit'
 
 /** Une commande fournisseur : ce qu'on attend d'un même fournisseur, et qu'on réceptionne d'un coup. */
 type Ligne = { panier: Panier; commande: CommandeFournisseur; prevue: string; cle: string }
@@ -145,7 +146,9 @@ export function Commandes() {
                 <TableBody>
                   {detail.commande.lignes.map((x) => (
                     <TableRow key={x.id} className="h-row cursor-pointer" onClick={() => ouvrirFiche(x.cip13)}>
-                      <TableCell className="texte-donnee pl-4">{x.libelle}</TableCell>
+                      <TableCell className="texte-donnee max-w-0 pl-4">
+                        <NomProduit cip13={x.cip13} libelle={x.libelle} />
+                      </TableCell>
                       <TableCell className="texte-donnee tabular text-right">{x.quantite}</TableCell>
                       <TableCell className="texte-donnee tabular text-right">{formaterEuros(x.prixUnitaire)}</TableCell>
                       <TableCell className="texte-valeur tabular pr-4 text-right">{formaterEuros(x.montant)}</TableCell>

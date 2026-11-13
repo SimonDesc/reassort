@@ -9,6 +9,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ImageProduit } from '@/components/produit'
 
 export const TYPES_FOURNISSEUR: Record<TypeFournisseur, string> = {
   GROSSISTE: 'Grossiste-répartiteur',
@@ -33,11 +34,16 @@ export function FicheProduit({ cip13, onFermer }: { cip13: string; onFermer: () 
     <Dialog open onOpenChange={(ouvert) => !ouvert && onFermer()}>
       <DialogContent taille="grande">
         <DialogHeader>
-          <DialogTitle className="texte-section pr-8">{p?.libelle ?? 'Fiche produit'}</DialogTitle>
-          <DialogDescription className="flex flex-wrap items-center gap-2">
-            <span className="tabular">CIP {cip13}</span>
-            {p && <BadgeStatut statut={p.statut} />}
-          </DialogDescription>
+          <div className="flex items-center gap-4 pr-8">
+            <ImageProduit cip13={cip13} className="size-20 rounded-lg border bg-white p-1.5" />
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <DialogTitle className="texte-section">{p?.libelle ?? 'Fiche produit'}</DialogTitle>
+              <DialogDescription className="flex flex-wrap items-center gap-2">
+                <span className="tabular">CIP {cip13}</span>
+                {p && <BadgeStatut statut={p.statut} />}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
         <DialogBody className="gap-6">
           {fiche.isPending ? (

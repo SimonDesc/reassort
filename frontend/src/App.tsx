@@ -13,6 +13,7 @@ import {
   TruckIcon,
 } from 'lucide-react'
 import { api } from '@/api'
+import { useAssistant } from '@/components/assistant'
 import { formaterHeure } from '@/format'
 import { allerA, FicheProduitProvider, useEcran, useFicheProduit, type Ecran } from '@/navigation'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
@@ -78,6 +79,7 @@ export function App() {
 function Contenu() {
   const ecran = useEcran()
   const fiche = useFicheProduit()
+  useAssistant(ecran)
   return (
     <>
       <div key={ecran} className="@container/doc page-enter flex min-h-0 flex-1 flex-col">

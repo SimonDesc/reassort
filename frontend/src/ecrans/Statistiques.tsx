@@ -9,6 +9,7 @@ import { BarreListe, ChampRecherche, PageEcran, Segments, Tableau, type Colonne 
 import { Skeleton } from '@/components/ui/skeleton'
 import { TYPES_FOURNISSEUR } from '@/ecrans/FicheProduit'
 import { GraphiquesStatistiques } from '@/ecrans/GraphiquesStatistiques'
+import { NomProduit } from '@/components/produit'
 
 type ProduitStat = Statistiques['produits'][number]
 type FournisseurStat = Statistiques['fournisseurs'][number]
@@ -150,7 +151,7 @@ function ConsommationParProduit({ stats }: { stats: Statistiques }) {
   const visibles = stats.produits.filter((p) => filtres[vue](p) && (!cherche || p.libelle.toLowerCase().includes(cherche) || p.cip13.includes(cherche)))
 
   const colonnes: Colonne<ProduitStat>[] = [
-    { id: 'produit', libelle: 'Produit', rendu: (p) => p.libelle, tri: (p) => p.libelle },
+    { id: 'produit', libelle: 'Produit', rendu: (p) => <NomProduit cip13={p.cip13} libelle={p.libelle} />, tri: (p) => p.libelle },
     { id: 'tendance', libelle: 'Par semaine', rendu: (p) => <Tendance valeurs={p.parSemaine} />, largeur: 104, masqueeSous: 'sm' },
     { id: 'vendues', libelle: 'Vendues', rendu: (p) => formaterNombre(p.vendues), tri: (p) => p.vendues, alignement: 'droite', largeur: 90 },
     {

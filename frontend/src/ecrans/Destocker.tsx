@@ -11,6 +11,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { EtatVide } from '@/components/illustration'
+import { NomProduit } from '@/components/produit'
 
 type Vue = 'a-publier' | 'publiees' | 'toutes'
 
@@ -40,7 +41,7 @@ export function Destocker() {
   const valeur = (s: SuggestionDestockage) => (s.annonce ? s.annonce.montant : s.quantiteADestocker * (s.prixConseille ?? 0))
 
   const colonnes: Colonne<SuggestionDestockage>[] = [
-    { id: 'produit', libelle: 'Produit', rendu: (s) => s.libelle, tri: (s) => s.libelle },
+    { id: 'produit', libelle: 'Produit', rendu: (s) => <NomProduit cip13={s.cip13} libelle={s.libelle} />, tri: (s) => s.libelle },
     { id: 'stock', libelle: 'Stock', rendu: (s) => s.stock, tri: (s) => s.stock, alignement: 'droite', largeur: 80 },
     { id: 'ventes', libelle: 'Ventes / j', rendu: (s) => formaterNombre(s.venteMoyenneParJour), tri: (s) => s.venteMoyenneParJour, alignement: 'droite', largeur: 100, masqueeSous: 'md' },
     {

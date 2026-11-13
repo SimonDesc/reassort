@@ -211,6 +211,8 @@ export const api = {
   },
   modifierLigne: (panierId: string, ligneId: number, modification: { quantite?: number; offreId?: number }) =>
     appeler<Panier>(`/api/paniers/${panierId}/lignes/${ligneId}`, { method: 'PATCH', body: JSON.stringify(modification) }),
+  ajouterProduit: (panierId: string, cip13: string) =>
+    appeler<Panier>(`/api/paniers/${panierId}/lignes`, { method: 'POST', body: JSON.stringify({ cip13 }) }),
   retirerLigne: (panierId: string, ligneId: number) =>
     appeler<Panier>(`/api/paniers/${panierId}/lignes/${ligneId}`, { method: 'DELETE' }),
   recevoir: (panierId: string, fournisseurId: string) =>

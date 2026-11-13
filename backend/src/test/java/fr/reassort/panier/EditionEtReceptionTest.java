@@ -55,6 +55,21 @@ class EditionEtReceptionTest {
 	}
 
 	@Test
+	void unProduitCouvertSAjouteAuPanierUneSeuleFois() {
+		Panier panier = paniers.proposer(7);
+		String couvert = previsions.prevoir(7).stream().filter(p -> p.quantiteSuggeree() == 0).findFirst().orElseThrow().cip13();
+
+		Panier avec = paniers.ajouterProduit(panier.id(), couvert);
+
+		Ligne ajoutee = avec.commandes().stream().flatMap(c -> c.lignes().stream())
+				.filter(l -> l.cip13().equals(couvert)).findFirst().orElseThrow();
+		assertThat(avec.nombreLignes()).isEqualTo(panier.nombreLignes() + 1);
+		assertThat(ajoutee.quantite()).isPositive();
+		assertThat(ajoutee.quantite() % ajoutee.colisage()).isZero();
+		assertThatThrownBy(() -> paniers.ajouterProduit(panier.id(), couvert)).hasMessageContaining("déjà dans le panier");
+	}
+
+	@Test
 	void changerDeFournisseurArrondiAuColisageEtDeplaceLaLigne() {
 		Panier panier = paniers.proposer(14);
 		Ligne ligne = grossiste(panier).lignes().stream()

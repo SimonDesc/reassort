@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TYPES_FOURNISSEUR } from '@/ecrans/FicheProduit'
+import { NomProduit } from '@/components/produit'
 
 const JOURS = 14
 const RUPTURES: ChartConfig = { produits: { label: 'Produits vides', color: 'var(--chart-1)' } }
@@ -93,7 +94,7 @@ function Contenu({ tableau, previsions }: { tableau: TableauDeBord; previsions?:
 }
 
 const URGENCES: Colonne<Prevision>[] = [
-  { id: 'produit', libelle: 'Produit', rendu: (p) => p.libelle },
+  { id: 'produit', libelle: 'Produit', rendu: (p) => <NomProduit cip13={p.cip13} libelle={p.libelle} /> },
   { id: 'statut', libelle: 'Statut', rendu: (p) => <BadgeStatut statut={p.statut} />, largeur: 150, masqueeSous: 'sm' },
   { id: 'stock', libelle: 'Stock', rendu: (p) => p.stock, alignement: 'droite', largeur: 70 },
   {

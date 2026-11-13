@@ -225,6 +225,37 @@ public class PanierService {
 	}
 
 	/**
+	 * Ajoute au brouillon un produit que le calcul n'a pas retenu : la quantité suggérée s'il y en a une, sinon un
+	 * colis, au fournisseur que retient {@link ChoixOffre}.
+	 */
+	@Transactional
+	public Panier ajouterProduit(UUID panierId, String cip13) {
+		exigerBrouillon(panierId);
+		boolean present = jdbc.sql("""
+				SELECT count(*) FROM ligne_panier l JOIN offre o ON o.id = l.offre_id WHERE l.panier_id = ? AND o.cip13 = ?""")
+				.params(panierId, cip13).query(Integer.class).single() > 0;
+		if (present) {
+			throw new Refus(HttpStatus.CONFLICT, "Ce produit est déjà dans le panier.");
+		}
+		int horizon = jdbc.sql("SELECT horizon_jours FROM panier WHERE id = ?").param(panierId).query(Integer.class).single();
+		Prevision prevision = previsions.prevoir(horizon).stream()
+				.filter(p -> p.cip13().equals(cip13))
+				.findFirst()
+				.orElseThrow(() -> new Refus(HttpStatus.NOT_FOUND, "Produit inconnu."));
+		Choix c = ChoixOffre.choisir(Math.max(prevision.quantiteSuggeree(), 1), prevision.couvertureJours(),
+				offresParProduit().getOrDefault(cip13, List.of()), LocalDate.now(horloge))
+				.orElseThrow(() -> new Refus(HttpStatus.UNPROCESSABLE_CONTENT, "Aucune offre pour ce produit."));
+		jdbc.sql("""
+				INSERT INTO ligne_panier (panier_id, offre_id, quantite, prix_unitaire,
+				                          statut_produit, quantite_suggeree, couverture_jours, livre_apres_rupture)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?)""")
+				.params(panierId, c.offre().id(), c.quantite(), c.offre().prixUnitaire(), prevision.statut().name(),
+						prevision.quantiteSuggeree(), prevision.couvertureJours(), c.livreApresRupture())
+				.update();
+		return lire(panierId);
+	}
+
+	/**
 	 * Les cartons d'un fournisseur sont arrivés : ses lignes sont reçues et le stock augmente d'autant. Quand tous les
 	 * fournisseurs ont livré, le panier passe « Reçu ».
 	 */

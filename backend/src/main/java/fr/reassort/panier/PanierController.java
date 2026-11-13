@@ -45,6 +45,15 @@ class PanierController {
 		return paniers.modifierLigne(id, ligneId, modification.quantite(), modification.offreId());
 	}
 
+	/** Ajouter au brouillon un produit que le calcul n'avait pas retenu. */
+	@PostMapping("/{id}/lignes")
+	Panier ajouterProduit(@PathVariable UUID id, @RequestBody AjoutProduit ajout) {
+		return paniers.ajouterProduit(id, ajout.cip13());
+	}
+
+	record AjoutProduit(String cip13) {
+	}
+
 	@DeleteMapping("/{id}/lignes/{ligneId}")
 	Panier retirerLigne(@PathVariable UUID id, @PathVariable long ligneId) {
 		return paniers.retirerLigne(id, ligneId);
