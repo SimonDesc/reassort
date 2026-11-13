@@ -5,7 +5,6 @@ import {
   GaugeIcon,
   MoonIcon,
   PackageOpenIcon,
-  PillIcon,
   PlusIcon,
   SettingsIcon,
   ShoppingCartIcon,
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/api'
 import { Assistant } from '@/components/assistant'
+import { Logo } from '@/components/illustration'
 import { formaterHeure } from '@/format'
 import { allerA, FicheProduitProvider, useEcran, useFicheProduit, type Ecran } from '@/navigation'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
@@ -124,9 +124,7 @@ function BarreLaterale() {
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex h-12 items-center gap-2 overflow-hidden rounded-md p-2 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <PillIcon className="size-4" />
-              </div>
+              <Logo key={ecran} className="size-8 shrink-0" />
               <div className="grid min-w-0 flex-1 gap-0.5 text-left leading-tight">
                 <span className="font-display text-[15px] font-bold text-titre">Réassort</span>
                 <span className="texte-meta truncate">Pharmacie de démonstration</span>

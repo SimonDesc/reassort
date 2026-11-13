@@ -6,6 +6,7 @@ import comparerOffres from '@/illustrations/comparer-offres.svg?raw'
 import panierRecommande from '@/illustrations/panier-recommande.svg?raw'
 import assistantReassort from '@/illustrations/assistant-reassort.svg?raw'
 import commandeValidee from '@/illustrations/commande-validee.svg?raw'
+import logo from '@/illustrations/logo-reassort.svg?raw'
 
 const DESSINS = {
   'import-csv': importCsv,
@@ -31,4 +32,12 @@ export function EtatVide({ nom, children }: { nom: NomIllustration; children: Re
       <div className="texte-discret">{children}</div>
     </div>
   )
+}
+
+/**
+ * Le logo animé (la gélule tombe dans la boîte). Posé en SVG dans la page : remonté à chaque changement d'écran
+ * (`key`), son animation CSS repart du début.
+ */
+export function Logo({ className }: { className?: string }) {
+  return <span className={cn('block [&_svg]:size-full', className)} dangerouslySetInnerHTML={{ __html: logo }} />
 }
