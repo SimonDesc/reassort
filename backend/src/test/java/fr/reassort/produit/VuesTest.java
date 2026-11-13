@@ -68,6 +68,18 @@ class VuesTest {
 	}
 
 	@Test
+	void lesOffresDePlusieursProduitsArriventEnUnAppel() {
+		Map<String, java.util.List<?>> offres = api.get()
+				.uri("/api/produits/offres?cip13=3400999000024&cip13=3400999000024&cip13=3400999999999").retrieve()
+				.body(new org.springframework.core.ParameterizedTypeReference<Map<String, java.util.List<?>>>() {
+				});
+
+		assertThat(offres).containsOnlyKeys("3400999000024", "3400999999999");
+		assertThat(offres.get("3400999000024")).hasSizeGreaterThan(1);
+		assertThat(offres.get("3400999999999")).isEmpty();
+	}
+
+	@Test
 	void unProduitInconnuRenvoie404() {
 		assertThatThrownBy(() -> api.get().uri("/api/produits/3400999999999").retrieve().toBodilessEntity())
 				.isInstanceOfSatisfying(HttpClientErrorException.class,

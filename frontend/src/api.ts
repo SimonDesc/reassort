@@ -18,12 +18,14 @@ export type Prevision = {
 
 export type LignePanier = {
   id: number
+  offreId: number
   cip13: string
   libelle: string
   statutProduit: StatutProduit
   couvertureJours: number | null
   quantiteSuggeree: number
   quantite: number
+  colisage: number
   prixUnitaire: number
   montant: number
   delaiJours: number
@@ -39,15 +41,17 @@ export type CommandeFournisseur = {
   sousTotal: number
   franco: number
   resteAvantFranco: number
+  recueLe: string | null
   lignes: LignePanier[]
 }
 
 export type Panier = {
   id: string
-  statut: 'BROUILLON' | 'VALIDE'
+  statut: 'BROUILLON' | 'VALIDE' | 'RECU'
   horizonJours: number
   creeLe: string
   valideLe: string | null
+  recuLe: string | null
   total: number
   nombreLignes: number
   commandes: CommandeFournisseur[]
@@ -84,6 +88,50 @@ export type Resume = {
   stockReleveLe: string | null
 }
 
+export type TypeFournisseur = CommandeFournisseur['typeFournisseur']
+
+export type VenteJour = { jour: string; quantite: number }
+
+export type OffreProduit = {
+  id: number
+  fournisseurId: string
+  fournisseur: string
+  typeFournisseur: TypeFournisseur
+  prixUnitaire: number
+  delaiJours: number
+  colisage: number
+  quantiteDisponible: number | null
+  peremption: string | null
+  franco: number
+}
+
+export type FicheProduit = {
+  prevision: Prevision
+  ventes: VenteJour[]
+  offres: OffreProduit[]
+  enCommande: { panierId: string; fournisseur: string; quantite: number; valideLe: string; livraisonPrevueLe: string }[]
+}
+
+export type TableauDeBord = {
+  produitsParStatut: Record<StatutProduit, number>
+  valeurStock: number
+  valeurSurstock: number
+  commandesEnCours: number
+  montantEnCours: number
+  achats90Jours: number
+  economies90Jours: number
+  ventesParJour: VenteJour[]
+  achatsParFournisseur: { fournisseur: string; typeFournisseur: TypeFournisseur; montant: number; commandes: number }[]
+  urgences: Prevision[]
+}
+
+export type Reglages = {
+  joursHistorique: number
+  stockSecuriteJours: number
+  surstockJours: number
+  conserverJours: number
+}
+
 /** Une erreur de l'API : le message est le `detail` du Problem Details renvoyé par le serveur. */
 export class ErreurApi extends Error {}
 
@@ -108,6 +156,24 @@ export const api = {
   resume: () => appeler<Resume>('/api/demo/resume'),
   reinitialiser: () => appeler<Resume>('/api/demo/reinitialiser', { method: 'POST' }),
   previsions: (horizon: number) => appeler<Prevision[]>(`/api/previsions?horizon=${horizon}`),
+  tableauDeBord: () => appeler<TableauDeBord>('/api/tableau-de-bord'),
+  ficheProduit: (cip13: string) => appeler<FicheProduit>(`/api/produits/${cip13}`),
+  offres: (cip13: string[]) =>
+    appeler<Record<string, OffreProduit[]>>(`/api/produits/offres?${cip13.map((c) => `cip13=${c}`).join('&')}`),
+  historique: () => appeler<Panier[]>('/api/paniers'),
+  dernierPanier: async () => {
+    const reponse = await fetch('/api/paniers/dernier')
+    return reponse.ok ? ((await reponse.json()) as Panier) : null
+  },
+  modifierLigne: (panierId: string, ligneId: number, modification: { quantite?: number; offreId?: number }) =>
+    appeler<Panier>(`/api/paniers/${panierId}/lignes/${ligneId}`, { method: 'PATCH', body: JSON.stringify(modification) }),
+  retirerLigne: (panierId: string, ligneId: number) =>
+    appeler<Panier>(`/api/paniers/${panierId}/lignes/${ligneId}`, { method: 'DELETE' }),
+  recevoir: (panierId: string, fournisseurId: string) =>
+    appeler<Panier>(`/api/paniers/${panierId}/receptions/${fournisseurId}`, { method: 'POST' }),
+  reglages: () => appeler<Reglages>('/api/reglages'),
+  modifierReglages: (reglages: Reglages) =>
+    appeler<Reglages>('/api/reglages', { method: 'PUT', body: JSON.stringify(reglages) }),
   proposerPanier: (horizon: number) => appeler<Panier>(`/api/paniers?horizon=${horizon}`, { method: 'POST' }),
   validerPanier: (id: string) => appeler<Panier>(`/api/paniers/${id}/validation`, { method: 'POST' }),
   suggestionsDestockage: () => appeler<SuggestionDestockage[]>('/api/destockage/suggestions'),

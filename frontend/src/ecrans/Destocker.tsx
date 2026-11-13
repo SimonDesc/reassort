@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type SuggestionDestockage } from '@/api'
 import { formaterDate, formaterEuros, formaterNombre, pluriel } from '@/format'
 import { Panel } from '@/components/service-ui/panel'
+import { EnteteEcran } from '@/components/entete'
+import { useFicheProduit } from '@/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -25,22 +27,22 @@ export function Destocker() {
     },
   })
 
+  const { ouvrir } = useFicheProduit()
   const liste = suggestions.data ?? []
   const valeur = liste.reduce((total, s) => total + s.quantiteADestocker * (s.prixConseille ?? 0), 0)
 
   return (
-    <Panel className="page-enter gap-6 p-carte">
-      <div className="flex flex-col gap-1">
-        <h2 className="texte-section">Ce qui dort en réserve</h2>
-        {suggestions.data && (
-          <p className="texte-discret">
-            {liste.length === 0
-              ? 'Aucun surstock : rien à déstocker.'
-              : `${pluriel(liste.length, 'produit')} au-delà de 90 jours de stock · environ ${formaterEuros(valeur)} à récupérer auprès des confrères`}
-          </p>
-        )}
-      </div>
-
+    <div className="page-enter">
+      <EnteteEcran
+        titre="Déstockage"
+        sousTitre={
+          suggestions.data &&
+          (liste.length === 0
+            ? 'Aucun surstock : rien à déstocker.'
+            : `${pluriel(liste.length, 'produit')} en surstock · environ ${formaterEuros(valeur)} à récupérer en les proposant aux confrères`)
+        }
+      />
+      <Panel className="gap-6 p-carte">
       {suggestions.isPending ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-10 w-full" />)}
@@ -64,7 +66,9 @@ export function Destocker() {
               {liste.map((s) => (
                 <TableRow key={s.cip13}>
                   <TableCell className="max-w-80">
-                    <p className="texte-valeur truncate">{s.libelle}</p>
+                    <Button variant="lien-objet" size="texte" className="max-w-full truncate" onClick={() => ouvrir(s.cip13)}>
+                      {s.libelle}
+                    </Button>
                     <p className="texte-meta tabular">{formaterNombre(s.venteMoyenneParJour)} vendus par jour</p>
                   </TableCell>
                   <TableCell className="texte-donnee tabular text-right">{s.stock}</TableCell>
@@ -101,8 +105,9 @@ export function Destocker() {
         )
       )}
 
+      </Panel>
       {aPublier && <FenetrePublication suggestion={aPublier} onFermer={() => setAPublier(null)} />}
-    </Panel>
+    </div>
   )
 }
 

@@ -50,6 +50,27 @@ class FicheProduitController {
 			List<CommandeEnCours> enCommande) {
 	}
 
+	/** Les offres de plusieurs produits d'un coup : de quoi changer de fournisseur dans le panier. */
+	@GetMapping("/offres")
+	java.util.Map<String, List<OffreProduit>> offres(@RequestParam List<String> cip13) {
+		return cip13.stream().distinct().collect(java.util.stream.Collectors.toMap(c -> c, this::offresDe));
+	}
+
+	private List<OffreProduit> offresDe(String cip13) {
+		return jdbc.sql("""
+				SELECT o.id, f.id AS fournisseur_id, f.nom, f.type, o.prix_unitaire, o.delai_jours, o.colisage,
+				       o.quantite_disponible, o.peremption, f.franco
+				FROM offre o JOIN fournisseur f ON f.id = o.fournisseur_id
+				WHERE o.cip13 = ?
+				ORDER BY o.prix_unitaire""")
+				.param(cip13)
+				.query((rs, i) -> new OffreProduit(rs.getLong("id"), rs.getString("fournisseur_id"), rs.getString("nom"),
+						rs.getString("type"), rs.getBigDecimal("prix_unitaire"), rs.getInt("delai_jours"), rs.getInt("colisage"),
+						rs.getObject("quantite_disponible", Integer.class), rs.getObject("peremption", LocalDate.class),
+						rs.getBigDecimal("franco")))
+				.list();
+	}
+
 	@GetMapping("/{cip13}")
 	FicheProduit fiche(@PathVariable String cip13, @RequestParam(defaultValue = "7") @Min(1) @Max(60) int horizon) {
 		Prevision prevision = previsions.prevoir(horizon, cip13);
@@ -67,18 +88,7 @@ class FicheProduitController {
 				.query((rs, i) -> new VenteJour(rs.getObject("jour", LocalDate.class), rs.getInt("quantite")))
 				.list();
 
-		List<OffreProduit> offres = jdbc.sql("""
-				SELECT o.id, f.id AS fournisseur_id, f.nom, f.type, o.prix_unitaire, o.delai_jours, o.colisage,
-				       o.quantite_disponible, o.peremption, f.franco
-				FROM offre o JOIN fournisseur f ON f.id = o.fournisseur_id
-				WHERE o.cip13 = ?
-				ORDER BY o.prix_unitaire""")
-				.param(cip13)
-				.query((rs, i) -> new OffreProduit(rs.getLong("id"), rs.getString("fournisseur_id"), rs.getString("nom"),
-						rs.getString("type"), rs.getBigDecimal("prix_unitaire"), rs.getInt("delai_jours"), rs.getInt("colisage"),
-						rs.getObject("quantite_disponible", Integer.class), rs.getObject("peremption", LocalDate.class),
-						rs.getBigDecimal("franco")))
-				.list();
+		List<OffreProduit> offres = offresDe(cip13);
 
 		List<CommandeEnCours> enCommande = jdbc.sql("""
 				SELECT pa.id, f.nom, l.quantite, pa.valide_le, o.delai_jours

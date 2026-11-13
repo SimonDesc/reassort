@@ -98,9 +98,10 @@
     --input: oklch(0.86 0.025 275);
     --ring: oklch(0.6 0.14 158);
 
-    --chart-1: oklch(0.6 0.14 158);
-    --chart-2: oklch(0.62 0.15 60);
-    --chart-3: oklch(0.45 0.13 273);
+    /* Graphiques : teintes validées (contraste et daltonisme) contre la surface des cartes */
+    --chart-1: #02985f;
+    --chart-2: #3f4c9c;
+    --chart-3: oklch(0.62 0.15 60);
 }
 
 .dark {
@@ -135,9 +136,9 @@
     --input: oklch(1 0 0 / 14%);
     --ring: oklch(0.72 0.15 158);
 
-    --chart-1: oklch(0.72 0.15 158);
-    --chart-2: oklch(0.8 0.13 65);
-    --chart-3: oklch(0.76 0.09 273);
+    --chart-1: #22a56a;
+    --chart-2: #697eda;
+    --chart-3: oklch(0.8 0.13 65);
 }
 
 @layer base {
