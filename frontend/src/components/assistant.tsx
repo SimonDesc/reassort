@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 
 type Conseil = { message: string; action?: { libelle: string; faire: () => void } }
 
-const preparerPanier = { libelle: 'Préparer le panier', faire: () => allerA('reassort', { panier: 'nouveau' }) }
+const preparerPanier = { libelle: 'Voir le panier', faire: () => allerA('reassort', { panier: 'nouveau' }) }
 
 /** Ce que l'assistant signale en arrivant sur chaque écran, à partir des mêmes chiffres que le serveur MCP. */
 const CONSEILS: Partial<Record<Ecran, (t: TableauDeBord) => Conseil | null>> = {
@@ -26,7 +26,7 @@ const CONSEILS: Partial<Record<Ecran, (t: TableauDeBord) => Conseil | null>> = {
   reassort: (t) => {
     const n = t.produitsParStatut.RUPTURE_IMMINENTE + t.produitsParStatut.A_COMMANDER
     if (n === 0) return null
-    return { message: `${pluriel(n, 'produit')} à traiter : je compare les offres et propose le panier le moins cher, franco compris.`, action: preparerPanier }
+    return { message: `${pluriel(n, 'produit')} à traiter : le panier ci-dessous retient pour chacun l’offre la moins chère livrée à temps. Ajustez les quantités puis validez.` }
   },
   commandes: (t) =>
     t.commandesEnCours > 0
