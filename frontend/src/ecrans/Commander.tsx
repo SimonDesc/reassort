@@ -114,9 +114,9 @@ export function Commander() {
 
   const colonnes: Colonne<Prevision>[] = [
     { id: 'produit', libelle: 'Produit', rendu: (p) => <NomProduit cip13={p.cip13} libelle={p.libelle} />, tri: (p) => p.libelle },
-    { id: 'statut', libelle: 'Statut', rendu: (p) => <BadgeStatut statut={p.statut} />, tri: (p) => ORDRE[p.statut], largeur: 140, masqueeSous: 'md' },
-    { id: 'stock', libelle: 'Stock', rendu: (p) => p.stock, tri: (p) => p.stock, alignement: 'droite', largeur: 66, masqueeSous: 'sm' },
-    { id: 'ventes', libelle: 'Ventes / j', rendu: (p) => formaterNombre(p.venteMoyenneParJour), tri: (p) => p.venteMoyenneParJour, alignement: 'droite', largeur: 88, masqueeSous: 'xl' },
+    { id: 'statut', libelle: 'Statut', rendu: (p) => <BadgeStatut statut={p.statut} />, tri: (p) => ORDRE[p.statut], largeur: 140, masqueeSous: '2xl' },
+    { id: 'stock', libelle: 'Stock', rendu: (p) => p.stock, tri: (p) => p.stock, alignement: 'droite', largeur: 66, masqueeSous: 'md' },
+    { id: 'ventes', libelle: 'Ventes / j', rendu: (p) => formaterNombre(p.venteMoyenneParJour), tri: (p) => p.venteMoyenneParJour, alignement: 'droite', largeur: 88, masqueeSous: '2xl' },
     {
       id: 'rupture',
       libelle: 'Rupture prévue',
@@ -128,7 +128,7 @@ export function Commander() {
         ),
       tri: (p) => p.ruptureEstimeeLe,
       largeur: 118,
-      masqueeSous: 'lg',
+      masqueeSous: 'xl',
     },
     {
       id: 'commande',
@@ -168,8 +168,8 @@ export function Commander() {
           <span className="text-muted-foreground">—</span>
         )
       },
-      largeur: 250,
-      masqueeSous: 'sm',
+      largeur: 220,
+      masqueeSous: 'lg',
     },
     {
       id: 'montant',
@@ -181,7 +181,7 @@ export function Commander() {
       tri: (p) => lignes.get(p.cip13)?.montant ?? -1,
       alignement: 'droite',
       largeur: 100,
-      masqueeSous: 'sm',
+      masqueeSous: 'xl',
     },
   ]
 
