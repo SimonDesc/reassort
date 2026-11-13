@@ -10,6 +10,13 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  # Le front est servi par Spring Boot : le navigateur revalide chaque fichier (304 s'il n'a pas changé), si bien
+  # qu'un redéploiement est visible tout de suite, sans index.html périmé qui pointerait vers d'anciens fichiers.
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-cache: true
 
   # Serveur MCP (Spring AI) : HTTP streamable sur /mcp
   ai:
