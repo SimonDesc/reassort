@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RotateCcwIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, RotateCcwIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Reglages } from "@/api";
 import { formaterDate } from "@/format";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const CHAMPS: {
   cle: keyof Reglages;
@@ -224,8 +225,72 @@ function Demo() {
   );
 }
 
+/** Les trois façons de brancher un client MCP sur la démo, prêtes à copier. */
+function configurations(url: string, jeton: string | null) {
+  const entete = jeton ? `Authorization: Bearer ${jeton}` : null;
+  return [
+    {
+      cle: "claude-code",
+      libelle: "Claude Code",
+      code: `claude mcp add --transport http reassort ${url}${entete ? ` --header "${entete}"` : ""}`,
+    },
+    {
+      cle: "claude-desktop",
+      libelle: "Claude Desktop",
+      code: JSON.stringify(
+        {
+          mcpServers: {
+            reassort: {
+              command: "npx",
+              args: ["-y", "mcp-remote", url, ...(entete ? ["--header", entete] : [])],
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    },
+    {
+      cle: "inspecteur",
+      libelle: "Inspecteur MCP",
+      code: `npx @modelcontextprotocol/inspector\n# Transport : Streamable HTTP\n# URL : ${url}${entete ? `\n# En-tête : ${entete}` : ""}`,
+    },
+  ];
+}
+
+function BlocCopiable({ code }: { code: string }) {
+  const [copie, setCopie] = useState(false);
+  return (
+    <div className="relative">
+      <pre className="rounded-md border bg-muted p-3 pr-11 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap">
+        {code}
+      </pre>
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        className="absolute top-1.5 right-1.5"
+        aria-label="Copier"
+        onClick={() => {
+          navigator.clipboard.writeText(code).then(() => {
+            setCopie(true);
+            setTimeout(() => setCopie(false), 1500);
+          });
+        }}
+      >
+        {copie ? <CheckIcon /> : <CopyIcon />}
+      </Button>
+    </div>
+  );
+}
+
 /** Le serveur MCP : un assistant IA lit les mêmes prévisions et prépare le panier, l'officine valide. */
 function Assistant() {
+  const connexion = useQuery({
+    queryKey: ["connexion-mcp"],
+    queryFn: api.connexionMcp,
+    retry: false,
+  });
+  const url = `${location.origin}/mcp`;
   return (
     <Panel className="mt-6 flex-row items-center gap-6 p-carte">
       <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -235,7 +300,27 @@ function Assistant() {
           prévisions, compare les offres et propose le panier de la semaine. La
           validation reste à l’officine.
         </p>
-        <code className="w-fit rounded-md border bg-muted px-2 py-1 font-mono text-xs">{`${location.origin}/mcp`}</code>
+        {connexion.isPending ? (
+          <Skeleton className="h-32" />
+        ) : (
+          <Tabs defaultValue="claude-code" className="min-w-0">
+            <TabsList>
+              {configurations(url, connexion.data?.jeton ?? null).map((c) => (
+                <TabsTrigger key={c.cle} value={c.cle}>
+                  {c.libelle}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {configurations(url, connexion.data?.jeton ?? null).map((c) => (
+              <TabsContent key={c.cle} value={c.cle}>
+                <BlocCopiable code={c.code} />
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
+        <p className="texte-meta">
+          Puis : « Qu’est-ce que je dois commander pour la semaine ? »
+        </p>
       </div>
       <Illustration
         nom="assistant-reassort"

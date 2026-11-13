@@ -59,7 +59,7 @@ Réassort expose ses actions à un assistant (Claude Desktop, Claude Code…) vi
 | `produits_a_destocker` | Le surstock, avec quantité et prix conseillés |
 | `publier_annonce_destockage` | Publie un lot sur la marketplace, **sur accord explicite** |
 
-On peut alors demander « *Qu'est-ce que je dois commander pour la semaine ?* » et obtenir le panier commenté. En ligne, l'accès exige un jeton (`Authorization: Bearer …`, variable `REASSORT_MCP_JETON`) ; en local, `.mcp.json` branche directement Claude Code sur http://localhost:8080/mcp.
+On peut alors demander « *Qu'est-ce que je dois commander pour la semaine ?* » et obtenir le panier commenté. En ligne, l'accès exige un jeton (`Authorization: Bearer …`, variable `REASSORT_MCP_JETON`) : l'écran « Réglages » de la démo le donne, avec la configuration prête à copier pour Claude Code, Claude Desktop et l'inspecteur MCP ; en local, `.mcp.json` branche directement Claude Code sur http://localhost:8080/mcp.
 
 ## Choix techniques
 

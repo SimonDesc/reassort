@@ -198,6 +198,7 @@ async function appeler<T>(url: string, init?: RequestInit): Promise<T> {
 export const api = {
   resume: () => appeler<Resume>('/api/demo/resume'),
   reinitialiser: () => appeler<Resume>('/api/demo/reinitialiser', { method: 'POST' }),
+  connexionMcp: () => appeler<{ jeton: string | null }>('/api/mcp/connexion'),
   previsions: (horizon: number) => appeler<Prevision[]>(`/api/previsions?horizon=${horizon}`),
   tableauDeBord: () => appeler<TableauDeBord>('/api/tableau-de-bord'),
   statistiques: (semaines: number) => appeler<Statistiques>(`/api/statistiques?semaines=${semaines}`),

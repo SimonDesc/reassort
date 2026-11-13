@@ -50,6 +50,16 @@ class ServeurMcpTest {
 	}
 
 	@Test
+	void laDemoDonneLeJetonPourBrancherUnAssistant() throws Exception {
+		var reponse = java.net.http.HttpClient.newHttpClient().send(
+				HttpRequest.newBuilder(java.net.URI.create("http://localhost:" + port + "/api/mcp/connexion")).build(),
+				java.net.http.HttpResponse.BodyHandlers.ofString());
+
+		assertThat(reponse.statusCode()).isEqualTo(200);
+		assertThat(reponse.body()).isEqualTo("{\"jeton\":\"secret-de-test\"}");
+	}
+
+	@Test
 	void lesCinqOutilsSontExposesAvecLeursIndicationsDeRisque() {
 		Map<String, Tool> outils = client.listTools().tools().stream()
 				.collect(java.util.stream.Collectors.toMap(Tool::name, t -> t));
