@@ -1,14 +1,18 @@
 # Déploiement (Coolify) ou essai local avec Docker : l'application et sa base.
+# Sur Coolify, les variables SERVICE_* sont générées par Coolify lui-même : mot de passe de la base, jeton MCP
+# et adresse publique (sous-domaine sslip.io par défaut). Pour développer, préférer `./mvnw spring-boot:test-run`.
 services:
   app:
     build: .
     environment:
+      SERVICE_URL_APP_8080: ${SERVICE_URL_APP_8080:-}
       DB_URL: jdbc:postgresql://postgres:5432/reassort
       DB_USER: reassort
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant}
+      DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES:?SERVICE_PASSWORD_POSTGRES manquant}
       # Jeton exigé par le serveur MCP (/mcp) ; vide, l'accès reste ouvert (développement local uniquement).
-      REASSORT_MCP_JETON: ${REASSORT_MCP_JETON:-}
-    ports:
+      REASSORT_MCP_JETON: ${SERVICE_PASSWORD_64_MCP:-}
+    # Pas de port publié : le proxy de Coolify sert l'application en HTTPS.
+    expose:
       - "8080"
     depends_on:
       postgres:
@@ -19,7 +23,7 @@ services:
     environment:
       POSTGRES_DB: reassort
       POSTGRES_USER: reassort
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant}
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES:?SERVICE_PASSWORD_POSTGRES manquant}
     volumes:
       - donnees:/var/lib/postgresql/data
     healthcheck:
