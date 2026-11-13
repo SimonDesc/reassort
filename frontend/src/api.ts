@@ -151,6 +151,7 @@ export type Statistiques = {
     livraisons: number
   }
   parSemaine: { debut: string; fin: string; boitesVendues: number; consommation: number; boitesAchetees: number; achats: number }[]
+  parJour: { jour: string; consommation: number; achats: number }[]
   produits: {
     cip13: string
     libelle: string

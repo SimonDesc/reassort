@@ -46,6 +46,9 @@ class StatistiquesTest {
 		Statistiques stats = lire(4);
 
 		assertThat(stats.parSemaine()).hasSize(4);
+		assertThat(stats.parJour()).hasSize(28);
+		assertThat(stats.parJour().stream().map(StatistiquesController.Jour::consommation).reduce(BigDecimal.ZERO, BigDecimal::add))
+				.isEqualByComparingTo(stats.synthese().consommation().valeur());
 		assertThat(stats.comparable()).isTrue();
 		assertThat(stats.synthese().boitesVendues().valeur()).isPositive();
 		assertThat(stats.synthese().boitesVendues().avant()).isPositive();

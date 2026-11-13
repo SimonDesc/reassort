@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { api, type Comparaison, type Statistiques } from '@/api'
 import { formaterEuros, formaterJour, formaterNombre } from '@/format'
 import { useFicheProduit } from '@/navigation'
 import { cn } from '@/components/lib/utils'
 import { Chiffre, Chiffres } from '@/components/chiffres'
 import { BarreListe, ChampRecherche, PageEcran, Segments, Tableau, type Colonne } from '@/components/liste'
-import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TYPES_FOURNISSEUR } from '@/ecrans/FicheProduit'
+import { GraphiquesStatistiques } from '@/ecrans/GraphiquesStatistiques'
 
 type ProduitStat = Statistiques['produits'][number]
 type FournisseurStat = Statistiques['fournisseurs'][number]
@@ -20,11 +19,6 @@ const PERIODES = [
   { valeur: '6', libelle: '6 semaines' },
   { valeur: '12', libelle: '12 semaines' },
 ] as const
-
-const SEMAINES: ChartConfig = {
-  consommation: { label: 'Consommation', color: 'var(--chart-1)' },
-  achats: { label: 'Réassort', color: 'var(--chart-2)' },
-}
 
 const pourcent = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0, signDisplay: 'exceptZero' })
 
@@ -106,39 +100,7 @@ function Contenu({ stats }: { stats: Statistiques }) {
         />
       </Chiffres>
 
-      <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h2 className="texte-section">Consommation et réassort par semaine</h2>
-          <Legende />
-        </div>
-        <div className="rounded-lg border bg-card p-4">
-          <ChartContainer config={SEMAINES} className="aspect-auto h-64 w-full">
-            <BarChart data={stats.parSemaine} margin={{ top: 8, right: 0, left: 0, bottom: 0 }} barGap={2}>
-              <CartesianGrid vertical={false} />
-              <XAxis dataKey="debut" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(d: string) => `sem. du ${formaterJour(d)}`} fontSize={11} />
-              <YAxis tickLine={false} axisLine={false} width={56} tickFormatter={(v: number) => `${Math.round(v / 100) / 10} k€`} />
-              <ChartTooltip
-                cursor={{ fillOpacity: 0.5 }}
-                content={({ active, payload }) => {
-                  const x = payload?.[0]?.payload as Statistiques['parSemaine'][number] | undefined
-                  if (!active || !x) return null
-                  return (
-                    <div className="grid min-w-52 gap-1.5 rounded-lg border border-border/50 bg-background px-3 py-2 text-xs shadow-xl">
-                      <span className="font-medium">
-                        Du {formaterJour(x.debut)} au {formaterJour(x.fin)}
-                      </span>
-                      <LigneInfobulle couleur="bg-chart-1" libelle="Consommation" montant={x.consommation} boites={x.boitesVendues} />
-                      <LigneInfobulle couleur="bg-chart-2" libelle="Réassort" montant={x.achats} boites={x.boitesAchetees} />
-                    </div>
-                  )
-                }}
-              />
-              <Bar dataKey="consommation" fill="var(--color-consommation)" radius={[4, 4, 0, 0]} maxBarSize={24} />
-              <Bar dataKey="achats" fill="var(--color-achats)" radius={[4, 4, 0, 0]} maxBarSize={24} />
-            </BarChart>
-          </ChartContainer>
-        </div>
-      </section>
+      <GraphiquesStatistiques stats={stats} />
 
       <ConsommationParProduit stats={stats} />
 
@@ -153,32 +115,6 @@ function Contenu({ stats }: { stats: Statistiques }) {
         />
       </section>
     </div>
-  )
-}
-
-function Legende() {
-  return (
-    <div className="texte-meta flex gap-4">
-      <span className="inline-flex items-center gap-1.5">
-        <span className="size-2.5 rounded-[3px] bg-chart-1" />
-        Consommation (prix d’achat)
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span className="size-2.5 rounded-[3px] bg-chart-2" />
-        Réassort commandé
-      </span>
-    </div>
-  )
-}
-
-function LigneInfobulle({ couleur, libelle, montant, boites }: { couleur: string; libelle: string; montant: number; boites: number }) {
-  return (
-    <span className="flex items-center gap-2">
-      <span className={cn('size-2.5 shrink-0 rounded-[3px]', couleur)} />
-      <span className="flex-1 text-muted-foreground">{libelle}</span>
-      <span className="font-medium tabular text-foreground">{formaterEuros(montant)}</span>
-      <span className="w-16 text-right tabular text-muted-foreground">{formaterNombre(boites)} b.</span>
-    </span>
   )
 }
 

@@ -50,6 +50,10 @@ class StatistiquesController {
 			BigDecimal achats) {
 	}
 
+	/** Un jour de la période : consommation valorisée et réassort commandé ce jour-là. */
+	record Jour(LocalDate jour, BigDecimal consommation, BigDecimal achats) {
+	}
+
 	record ProduitStat(String cip13, String libelle, int vendues, Integer venduesAvant, int achetees, int stock,
 			BigDecimal consommation, List<Integer> parSemaine) {
 	}
@@ -59,7 +63,7 @@ class StatistiquesController {
 	}
 
 	record Statistiques(LocalDate debut, LocalDate fin, int semaines, boolean comparable, Synthese synthese,
-			List<Semaine> parSemaine, List<ProduitStat> produits, List<FournisseurStat> fournisseurs) {
+			List<Semaine> parSemaine, List<Jour> parJour, List<ProduitStat> produits, List<FournisseurStat> fournisseurs) {
 	}
 
 	@GetMapping
@@ -166,6 +170,23 @@ class StatistiquesController {
 						rs.getBigDecimal(5), arrondi(rs.getBigDecimal(6)), arrondi(rs.getBigDecimal(7)), rs.getInt(8), rs.getInt(9)))
 				.list();
 
+		// Jour par jour, pour suivre consommation et réassort cumulés sur la période.
+		List<Jour> parJour = jdbc.sql("""
+				SELECT j.jour::date,
+				       coalesce((SELECT sum(v.quantite * px.prix) FROM vente v
+				                 JOIN (SELECT o.cip13, min(o.prix_unitaire) AS prix FROM offre o
+				                       JOIN fournisseur f ON f.id = o.fournisseur_id WHERE f.type <> 'CONFRERE' GROUP BY o.cip13) px
+				                   ON px.cip13 = v.cip13
+				                 WHERE v.jour = j.jour::date), 0),
+				       coalesce((SELECT sum(l.quantite * l.prix_unitaire) FROM panier pa JOIN ligne_panier l ON l.panier_id = pa.id
+				                 WHERE pa.statut IN ('VALIDE', 'RECU') AND %s = j.jour::date), 0)
+				FROM generate_series(CAST(:debut AS DATE), CAST(:fin AS DATE), INTERVAL '1 day') AS j(jour)
+				ORDER BY 1""".formatted(JOUR_COMMANDE))
+				.param("debut", debut).param("fin", fin)
+				.query((rs, i) -> new Jour(rs.getObject(1, LocalDate.class), rs.getBigDecimal(2).setScale(2, RoundingMode.HALF_UP),
+						rs.getBigDecimal(3).setScale(2, RoundingMode.HALF_UP)))
+				.list();
+
 		int livraisons = fournisseurs.stream().mapToInt(FournisseurStat::livraisons).sum();
 		int recues = fournisseurs.stream().mapToInt(FournisseurStat::recues).sum();
 		int aLHeure = fournisseurs.stream().mapToInt(FournisseurStat::aLHeure).sum();
@@ -181,7 +202,7 @@ class StatistiquesController {
 				moyenne(fournisseurs, true), moyenne(fournisseurs, false),
 				recues == 0 ? null : Math.round(100f * aLHeure / recues), livraisons);
 
-		return new Statistiques(debut, fin, semaines, comparable, synthese, parSemaine, produits, fournisseurs);
+		return new Statistiques(debut, fin, semaines, comparable, synthese, parSemaine, parJour, produits, fournisseurs);
 	}
 
 	private static BigDecimal valoriser(Map<String, BigDecimal> prix, String cip13, int quantite) {

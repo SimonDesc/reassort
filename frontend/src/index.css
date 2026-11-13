@@ -110,7 +110,7 @@
     /* Graphiques : teintes validées (contraste et daltonisme) contre la surface des cartes */
     --chart-1: #02985f;
     --chart-2: #3f4c9c;
-    --chart-3: oklch(0.62 0.15 60);
+    --chart-3: #c2700a;
 
     /* Barre latérale (structure Service-9000) : fond gris-bleu, entrée active en carte blanche, vert d'action */
     --sidebar: oklch(0.958 0.008 270);
@@ -160,7 +160,7 @@
 
     --chart-1: #22a56a;
     --chart-2: #697eda;
-    --chart-3: oklch(0.8 0.13 65);
+    --chart-3: #cf7b1c;
 
     --sidebar: oklch(0.16 0.03 275);
     --sidebar-foreground: oklch(0.8 0.02 275);
