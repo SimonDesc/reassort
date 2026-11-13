@@ -6,6 +6,8 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/reassort
       DB_USER: reassort
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant}
+      # Jeton exigé par le serveur MCP (/mcp) ; vide, l'accès reste ouvert (développement local uniquement).
+      REASSORT_MCP_JETON: ${REASSORT_MCP_JETON:-}
     ports:
       - "8080"
     depends_on:
