@@ -12,6 +12,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import { Spinner } from '@/components/ui/spinner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TYPES_FOURNISSEUR } from '@/ecrans/FicheProduit'
+import { EtatVide } from '@/components/illustration'
 
 /** Une commande fournisseur : ce qu'on attend d'un même fournisseur, et qu'on réceptionne d'un coup. */
 type Ligne = { panier: Panier; commande: CommandeFournisseur; prevue: string; cle: string }
@@ -117,7 +118,7 @@ export function Commandes() {
         onOuvrir={(l) => setOuverte(l.cle)}
         chargement={historique.isPending}
         erreur={historique.error?.message}
-        vide={vue === 'attente' ? 'Aucune livraison attendue.' : 'Aucune commande.'}
+        vide={<EtatVide nom="commande-validee">{vue === 'attente' ? 'Aucune livraison attendue.' : 'Aucune commande.'}</EtatVide>}
       />
 
       {detail && (

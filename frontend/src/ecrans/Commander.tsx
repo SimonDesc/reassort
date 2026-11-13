@@ -10,6 +10,7 @@ import { BadgeStatut } from '@/components/statut'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { FenetrePanier } from '@/ecrans/FenetrePanier'
+import { EtatVide } from '@/components/illustration'
 
 type Filtre = 'A_TRAITER' | StatutProduit | 'TOUS'
 const VUES: { valeur: Filtre; libelle: string }[] = [
@@ -146,7 +147,7 @@ export function Commander() {
         onOuvrir={(p) => ouvrir(p.cip13)}
         chargement={previsions.isPending}
         erreur={previsions.error?.message}
-        vide="Aucun produit."
+        vide={<EtatVide nom="anticiper-ruptures">Aucun produit dans cette vue.</EtatVide>}
       />
       {panier && <FenetrePanier key={panier.id} panier={panier} onFermer={() => setPanier(null)} />}
     </PageEcran>

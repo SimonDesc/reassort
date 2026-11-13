@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { EtatVide } from '@/components/illustration'
 
 type Vue = 'a-publier' | 'publiees' | 'toutes'
 
@@ -118,7 +119,7 @@ export function Destocker() {
         onOuvrir={(s) => ouvrir(s.cip13)}
         chargement={suggestions.isPending}
         erreur={suggestions.error?.message}
-        vide={vue === 'publiees' ? 'Aucune annonce publiée.' : 'Aucun produit en surstock.'}
+        vide={<EtatVide nom="comparer-offres">{vue === 'publiees' ? 'Aucune annonce publiée.' : 'Aucun produit en surstock.'}</EtatVide>}
       />
       {aPublier && <FenetrePublication suggestion={aPublier} onFermer={() => setAPublier(null)} />}
     </PageEcran>

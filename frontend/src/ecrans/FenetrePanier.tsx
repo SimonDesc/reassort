@@ -6,7 +6,7 @@ import { api, type CommandeFournisseur, type LignePanier, type OffreProduit, typ
 import { formaterDate, formaterEcheance, formaterEuros, pluriel } from '@/format'
 import { useFicheProduit } from '@/navigation'
 import { TYPES_FOURNISSEUR } from '@/ecrans/FicheProduit'
-import { AnimatedCheck } from '@/components/service-ui/animated-check'
+import { EtatVide, Illustration } from '@/components/illustration'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
@@ -69,15 +69,13 @@ export function FenetrePanier({ panier: propose, onFermer }: { panier: Panier; o
 
         <DialogBody className="gap-6">
           {!brouillon && (
-            <div className="flex items-center gap-3 text-st-ok">
-              <AnimatedCheck className="size-8" />
-              <p className="texte-valeur text-st-ok">
-                Commandes transmises aux fournisseurs.
-              </p>
+            <div className="flex flex-col items-center gap-1 text-center">
+              <Illustration nom="commande-validee" className="w-full max-w-72" />
+              <p className="texte-valeur text-st-ok">Commandes transmises aux fournisseurs</p>
             </div>
           )}
           {panier.nombreLignes === 0 ? (
-            <p className="texte-discret">Rien à commander : tout est couvert ou déjà commandé.</p>
+            <EtatVide nom="panier-recommande">Rien à commander : tout est couvert ou déjà commandé.</EtatVide>
           ) : (
             panier.commandes.map((commande) => (
               <Commande

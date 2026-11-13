@@ -284,9 +284,48 @@
 .check-anim .check-circle { stroke-dasharray: 60; animation: check-circle 360ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .check-anim .check-tick { stroke-dasharray: 20; animation: check-tick 240ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both; }
 
+/* Illustrations maison : elles entrent une fois, puis vivent doucement (plante au vent, badge qui flotte, coche tracée). */
+.illustration svg { display: block; width: 100%; height: auto; overflow: visible; }
+.illustration svg :is(.illu-plante, .illu-personnage, .illu-badge, .illu-alerte, .illu-fichier-csv, .illu-liste-commande, .illu-question, .illu-deco, .illu-point) {
+  transform-box: fill-box;
+}
+.illustration svg { animation: illu-entree 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.illu-plante { transform-origin: 50% 100%; animation: illu-vent 5s ease-in-out infinite; }
+.illu-personnage { transform-origin: 50% 100%; animation: illu-respire 4.5s ease-in-out infinite; }
+.illu-badge { transform-origin: center; animation: illu-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 250ms both, illu-flotte 3.6s ease-in-out 800ms infinite; }
+.illu-coche { stroke-dasharray: 1; animation: illu-trace 420ms cubic-bezier(0.22, 1, 0.36, 1) 550ms both; }
+.illu-alerte { transform-origin: 50% 100%; animation: illu-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 900ms both, illu-alerte 2.8s ease-in-out 1.6s infinite; }
+.illu-courbe { stroke-dasharray: 1; animation: illu-trace 900ms ease-out 200ms both; }
+.illu-prolonge { animation: illu-defile 900ms linear infinite; }
+.illu-fichier-csv { animation: illu-glisse 3.2s ease-in-out infinite; }
+.illu-liste-commande, .illu-question { animation: illu-flotte 4s ease-in-out infinite; }
+.illu-deco { transform-origin: center; animation: illu-scintille 2.6s ease-in-out infinite; }
+.illu-deco:nth-of-type(2n) { animation-delay: 1.3s; }
+.illu-point { animation: illu-tape 1.2s ease-in-out infinite; }
+.illu-point + .illu-point { animation-delay: 150ms; }
+.illu-point + .illu-point + .illu-point { animation-delay: 300ms; }
+
+@keyframes illu-entree { from { opacity: 0; transform: translateY(10px) scale(0.98); } }
+@keyframes illu-vent { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(2deg); } }
+@keyframes illu-respire { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes illu-pop { from { opacity: 0; transform: scale(0.4); } }
+@keyframes illu-flotte { 0%, 100% { translate: 0 0; } 50% { translate: 0 -5px; } }
+@keyframes illu-trace { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes illu-alerte { 0%, 80%, 100% { rotate: 0deg; } 85% { rotate: -6deg; } 90% { rotate: 5deg; } 95% { rotate: -3deg; } }
+@keyframes illu-defile { to { stroke-dashoffset: -11; } }
+@keyframes illu-glisse { 0%, 100% { translate: 0 0; } 50% { translate: 6px -3px; } }
+@keyframes illu-scintille { 0%, 100% { opacity: 1; scale: 1; } 50% { opacity: 0.35; scale: 0.7; } }
+@keyframes illu-tape { 0%, 60%, 100% { translate: 0 0; opacity: 0.5; } 30% { translate: 0 -3px; opacity: 1; } }
+
+/* En sombre, le fond de scène et le bleu nuit s'accordent à la carte ; les panneaux blancs restent éclairés. */
+.dark .illustration [fill="#F0F2F7"] { fill: var(--muted); }
+.dark .illustration [fill="#1E266D"] { fill: #4b59b5; }
+.dark .illustration [stroke="#1E266D"] { stroke: #4b59b5; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

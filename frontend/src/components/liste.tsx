@@ -149,7 +149,7 @@ export function Tableau<T>({
   const [tri, setTri] = useState<{ id: string; decroissant: boolean } | null>(null)
   if (erreur) return <p className="texte-donnee text-destructive">{erreur}</p>
   if (chargement) return <Skeleton className="h-72 w-full" />
-  if (lignes.length === 0) return <p className="texte-discret py-2">{vide}</p>
+  if (lignes.length === 0) return <div className="texte-discret py-2">{vide}</div>
 
   const colonneTriee = tri && colonnes.find((c) => c.id === tri.id)
   const triees = colonneTriee?.tri

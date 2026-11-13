@@ -1,62 +1,114 @@
-import { useState, type FormEvent } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { RotateCcwIcon } from 'lucide-react'
-import { toast } from 'sonner'
-import { api, type Reglages } from '@/api'
-import { formaterDate } from '@/format'
-import { PageEcran } from '@/components/liste'
-import { Panel } from '@/components/service-ui/panel'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Spinner } from '@/components/ui/spinner'
+import { useState, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RotateCcwIcon } from "lucide-react";
+import { toast } from "sonner";
+import { api, type Reglages } from "@/api";
+import { formaterDate } from "@/format";
+import { PageEcran } from "@/components/liste";
+import { Illustration } from "@/components/illustration";
+import { Panel } from "@/components/service-ui/panel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 
-const CHAMPS: { cle: keyof Reglages; libelle: string; aide: string; min: number; max: number }[] = [
-  { cle: 'joursHistorique', libelle: 'Historique de ventes', aide: 'Jours de ventes pris pour calculer la moyenne journalière.', min: 7, max: 90 },
-  { cle: 'stockSecuriteJours', libelle: 'Stock de sécurité', aide: 'Jours de ventes gardés en plus du délai de livraison.', min: 0, max: 30 },
-  { cle: 'surstockJours', libelle: 'Seuil de surstock', aide: 'Au-delà de cette couverture, le produit est en surstock.', min: 30, max: 365 },
-  { cle: 'conserverJours', libelle: 'Stock à conserver', aide: 'Jours de ventes gardés quand on déstocke le reste.', min: 7, max: 365 },
-]
+const CHAMPS: {
+  cle: keyof Reglages;
+  libelle: string;
+  aide: string;
+  min: number;
+  max: number;
+}[] = [
+  {
+    cle: "joursHistorique",
+    libelle: "Historique de ventes",
+    aide: "Jours de ventes pris pour calculer la moyenne journalière.",
+    min: 7,
+    max: 90,
+  },
+  {
+    cle: "stockSecuriteJours",
+    libelle: "Stock de sécurité",
+    aide: "Jours de ventes gardés en plus du délai de livraison.",
+    min: 0,
+    max: 30,
+  },
+  {
+    cle: "surstockJours",
+    libelle: "Seuil de surstock",
+    aide: "Au-delà de cette couverture, le produit est en surstock.",
+    min: 30,
+    max: 365,
+  },
+  {
+    cle: "conserverJours",
+    libelle: "Stock à conserver",
+    aide: "Jours de ventes gardés quand on déstocke le reste.",
+    min: 7,
+    max: 365,
+  },
+];
 
 /** Les paramètres du calcul : chaque officine règle sa prudence. Tout le reste de l'application en dépend. */
 export function ReglagesEcran() {
-  const reglages = useQuery({ queryKey: ['reglages'], queryFn: api.reglages })
+  const reglages = useQuery({ queryKey: ["reglages"], queryFn: api.reglages });
   return (
     <PageEcran titre="Réglages">
       {reglages.isPending ? (
         <Skeleton className="h-80" />
       ) : reglages.isError ? (
-        <p className="texte-donnee text-destructive">{reglages.error.message}</p>
+        <p className="texte-donnee text-destructive">
+          {reglages.error.message}
+        </p>
       ) : (
-        <Formulaire key={JSON.stringify(reglages.data)} initial={reglages.data} />
+        <Formulaire
+          key={JSON.stringify(reglages.data)}
+          initial={reglages.data}
+        />
       )}
+      <Assistant />
       <Demo />
     </PageEcran>
-  )
+  );
 }
 
 function Formulaire({ initial }: { initial: Reglages }) {
-  const client = useQueryClient()
+  const client = useQueryClient();
   const [valeurs, setValeurs] = useState<Record<keyof Reglages, string>>(
-    () => Object.fromEntries(CHAMPS.map(({ cle }) => [cle, String(initial[cle])])) as Record<keyof Reglages, string>,
-  )
-  const modifie = CHAMPS.some(({ cle }) => valeurs[cle] !== String(initial[cle]))
+    () =>
+      Object.fromEntries(
+        CHAMPS.map(({ cle }) => [cle, String(initial[cle])]),
+      ) as Record<keyof Reglages, string>,
+  );
+  const modifie = CHAMPS.some(
+    ({ cle }) => valeurs[cle] !== String(initial[cle]),
+  );
 
   const enregistrer = useMutation({
     mutationFn: () =>
-      api.modifierReglages(Object.fromEntries(CHAMPS.map(({ cle }) => [cle, Number(valeurs[cle])])) as Reglages),
+      api.modifierReglages(
+        Object.fromEntries(
+          CHAMPS.map(({ cle }) => [cle, Number(valeurs[cle])]),
+        ) as Reglages,
+      ),
     onSuccess: (nouveaux) => {
-      client.setQueryData(['reglages'], nouveaux)
-      for (const cle of ['previsions', 'tableau-de-bord', 'fiche', 'destockage']) client.invalidateQueries({ queryKey: [cle] })
-      toast.success('Réglages enregistrés : prévisions recalculées')
+      client.setQueryData(["reglages"], nouveaux);
+      for (const cle of [
+        "previsions",
+        "tableau-de-bord",
+        "fiche",
+        "destockage",
+      ])
+        client.invalidateQueries({ queryKey: [cle] });
+      toast.success("Réglages enregistrés : prévisions recalculées");
     },
-  })
+  });
 
   const envoyer = (e: FormEvent) => {
-    e.preventDefault()
-    enregistrer.mutate()
-  }
+    e.preventDefault();
+    enregistrer.mutate();
+  };
 
   return (
     <Panel className="p-carte">
@@ -75,7 +127,9 @@ function Formulaire({ initial }: { initial: Reglages }) {
                   max={max}
                   className="w-28 tabular"
                   value={valeurs[cle]}
-                  onChange={(e) => setValeurs({ ...valeurs, [cle]: e.target.value })}
+                  onChange={(e) =>
+                    setValeurs({ ...valeurs, [cle]: e.target.value })
+                  }
                 />
                 <span className="texte-discret">jours</span>
               </div>
@@ -94,45 +148,99 @@ function Formulaire({ initial }: { initial: Reglages }) {
             <Button
               type="button"
               variant="discret"
-              onClick={() => setValeurs(Object.fromEntries(CHAMPS.map(({ cle }) => [cle, String(initial[cle])])) as Record<keyof Reglages, string>)}
+              onClick={() =>
+                setValeurs(
+                  Object.fromEntries(
+                    CHAMPS.map(({ cle }) => [cle, String(initial[cle])]),
+                  ) as Record<keyof Reglages, string>,
+                )
+              }
             >
               Annuler les modifications
             </Button>
           )}
-          {enregistrer.isError && <p className="texte-donnee text-destructive">{enregistrer.error.message}</p>}
+          {enregistrer.isError && (
+            <p className="texte-donnee text-destructive">
+              {enregistrer.error.message}
+            </p>
+          )}
         </div>
       </form>
     </Panel>
-  )
+  );
 }
 
 function Demo() {
-  const client = useQueryClient()
-  const resume = useQuery({ queryKey: ['resume'], queryFn: api.resume })
+  const client = useQueryClient();
+  const resume = useQuery({ queryKey: ["resume"], queryFn: api.resume });
   const reinitialiser = useMutation({
     mutationFn: api.reinitialiser,
     onSuccess: () => {
-      client.invalidateQueries()
-      toast.success('Démonstration réinitialisée')
+      client.invalidateQueries();
+      toast.success("Démonstration réinitialisée");
     },
-  })
+  });
 
   return (
-    <Panel tone="muted" className="mt-6 gap-3 p-carte">
-      <h2 className="texte-section">Données de démonstration</h2>
-      <p className="texte-discret">
-        En production, stock et ventes arrivent du logiciel de gestion de l’officine (LGO).
-        {resume.data?.premiereVente && resume.data.derniereVente &&
-          ` Ici, ${resume.data.produits} produits et leurs ventes du ${formaterDate(resume.data.premiereVente)} au ${formaterDate(resume.data.derniereVente)}.`}
-      </p>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="outline" onClick={() => reinitialiser.mutate()} disabled={reinitialiser.isPending}>
-          {reinitialiser.isPending ? <Spinner data-icon="inline-start" /> : <RotateCcwIcon data-icon="inline-start" />}
-          Réinitialiser la démo
-        </Button>
-        <p className="texte-meta">Remet le stock, les commandes, les annonces et les réglages à leur état de départ.</p>
+    <Panel tone="muted" className="mt-6 flex-row items-center gap-6 p-carte">
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <h2 className="texte-section">Données de démonstration</h2>
+        <p className="texte-discret">
+          En production, stock et ventes arrivent du logiciel de gestion de
+          l’officine (LGO).
+          {resume.data?.premiereVente &&
+            resume.data.derniereVente &&
+            ` Ici, ${resume.data.produits} produits et leurs ventes du ${formaterDate(resume.data.premiereVente)} au ${formaterDate(resume.data.derniereVente)}.`}
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => reinitialiser.mutate()}
+            disabled={reinitialiser.isPending}
+          >
+            {reinitialiser.isPending ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <RotateCcwIcon data-icon="inline-start" />
+            )}
+            Réinitialiser la démo
+          </Button>
+          <p className="texte-meta">
+            Remet le stock, les commandes, les annonces et les réglages à leur
+            état de départ.
+          </p>
+        </div>
+        {reinitialiser.isError && (
+          <p className="texte-donnee text-destructive">
+            {reinitialiser.error.message}
+          </p>
+        )}
       </div>
-      {reinitialiser.isError && <p className="texte-donnee text-destructive">{reinitialiser.error.message}</p>}
+      <Illustration
+        nom="import-csv"
+        className="hidden w-56 shrink-0 sm:block"
+      />
     </Panel>
-  )
+  );
+}
+
+/** Le serveur MCP : un assistant IA lit les mêmes prévisions et prépare le panier, l'officine valide. */
+function Assistant() {
+  return (
+    <Panel className="mt-6 flex-row items-center gap-6 p-carte">
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <h2 className="texte-section">Assistant de réassort</h2>
+        <p className="texte-discret">
+          Un assistant IA se branche sur le serveur MCP de Réassort : il lit les
+          prévisions, compare les offres et propose le panier de la semaine. La
+          validation reste à l’officine.
+        </p>
+        <code className="w-fit rounded-md border bg-muted px-2 py-1 font-mono text-xs">{`${location.origin}/mcp`}</code>
+      </div>
+      <Illustration
+        nom="assistant-reassort"
+        className="hidden w-56 shrink-0 sm:block"
+      />
+    </Panel>
+  );
 }
