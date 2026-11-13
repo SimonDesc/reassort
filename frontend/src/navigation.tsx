@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from 'react'
 
 /** Les écrans de l'application ; l'écran ouvert vit dans l'adresse (#/commandes), le retour arrière fonctionne. */
-export const ECRANS = ['tableau-de-bord', 'reassort', 'commandes', 'destockage', 'reglages'] as const
+export const ECRANS = ['tableau-de-bord', 'reassort', 'commandes', 'statistiques', 'destockage', 'reglages'] as const
 export type Ecran = (typeof ECRANS)[number]
 
 const lireEcran = (): Ecran => {

@@ -132,6 +132,48 @@ export type Reglages = {
   conserverJours: number
 }
 
+/** Une valeur sur la période, et sur la période précédente quand l'historique la couvre. */
+export type Comparaison = { valeur: number; avant: number | null }
+
+export type Statistiques = {
+  debut: string
+  fin: string
+  semaines: number
+  comparable: boolean
+  synthese: {
+    boitesVendues: Comparaison
+    consommation: Comparaison
+    achats: Comparaison
+    commandes: Comparaison
+    delaiAnnonce: number | null
+    delaiReel: number | null
+    livraisonsALHeure: number | null
+    livraisons: number
+  }
+  parSemaine: { debut: string; fin: string; boitesVendues: number; consommation: number; boitesAchetees: number; achats: number }[]
+  produits: {
+    cip13: string
+    libelle: string
+    vendues: number
+    venduesAvant: number | null
+    achetees: number
+    stock: number
+    consommation: number
+    parSemaine: number[]
+  }[]
+  fournisseurs: {
+    fournisseur: string
+    typeFournisseur: TypeFournisseur
+    livraisons: number
+    boites: number
+    montant: number
+    delaiAnnonce: number | null
+    delaiReel: number | null
+    aLHeure: number
+    recues: number
+  }[]
+}
+
 /** Une erreur de l'API : le message est le `detail` du Problem Details renvoyé par le serveur. */
 export class ErreurApi extends Error {}
 
@@ -157,6 +199,7 @@ export const api = {
   reinitialiser: () => appeler<Resume>('/api/demo/reinitialiser', { method: 'POST' }),
   previsions: (horizon: number) => appeler<Prevision[]>(`/api/previsions?horizon=${horizon}`),
   tableauDeBord: () => appeler<TableauDeBord>('/api/tableau-de-bord'),
+  statistiques: (semaines: number) => appeler<Statistiques>(`/api/statistiques?semaines=${semaines}`),
   ficheProduit: (cip13: string) => appeler<FicheProduit>(`/api/produits/${cip13}`),
   offres: (cip13: string[]) =>
     appeler<Record<string, OffreProduit[]>>(`/api/produits/offres?${cip13.map((c) => `cip13=${c}`).join('&')}`),

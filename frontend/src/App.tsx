@@ -1,6 +1,7 @@
 import { useState, type ElementType } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
+  ChartColumnIcon,
   GaugeIcon,
   MoonIcon,
   PackageOpenIcon,
@@ -41,6 +42,7 @@ import { Commandes } from '@/ecrans/Commandes'
 import { Destocker } from '@/ecrans/Destocker'
 import { FicheProduit } from '@/ecrans/FicheProduit'
 import { ReglagesEcran } from '@/ecrans/Reglages'
+import { StatistiquesEcran } from '@/ecrans/Statistiques'
 import { TableauDeBordEcran } from '@/ecrans/TableauDeBord'
 
 type Entree = { ecran: Ecran; titre: string; icone: ElementType; groupe: string }
@@ -49,6 +51,7 @@ const ENTREES: Entree[] = [
   { ecran: 'tableau-de-bord', titre: 'Tableau de bord', icone: GaugeIcon, groupe: 'Officine' },
   { ecran: 'reassort', titre: 'Réassort', icone: ShoppingCartIcon, groupe: 'Officine' },
   { ecran: 'commandes', titre: 'Commandes', icone: TruckIcon, groupe: 'Officine' },
+  { ecran: 'statistiques', titre: 'Statistiques', icone: ChartColumnIcon, groupe: 'Officine' },
   { ecran: 'destockage', titre: 'Déstockage', icone: PackageOpenIcon, groupe: 'Marketplace' },
   { ecran: 'reglages', titre: 'Réglages', icone: SettingsIcon, groupe: 'Paramètres' },
 ]
@@ -81,6 +84,7 @@ function Contenu() {
         {ecran === 'tableau-de-bord' && <TableauDeBordEcran />}
         {ecran === 'reassort' && <Commander />}
         {ecran === 'commandes' && <Commandes />}
+        {ecran === 'statistiques' && <StatistiquesEcran />}
         {ecran === 'destockage' && <Destocker />}
         {ecran === 'reglages' && <ReglagesEcran />}
       </div>

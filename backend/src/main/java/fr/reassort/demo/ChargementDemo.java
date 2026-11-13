@@ -111,32 +111,41 @@ public class ChargementDemo {
 				donnees.stock().size(), ventes.size(), fournisseurs.size(), offres.size());
 	}
 
+	/** Nombre de semaines de commandes passées : un historique d'achats aussi long que celui des ventes. */
+	static final int SEMAINES_HISTORIQUE = 12;
+
 	/**
-	 * Trois commandes passées et reçues ces dernières semaines (labo, grossiste, dépositaire) : l'historique des
-	 * commandes n'est pas vide au premier lancement. Déjà reçues, elles ne changent pas la prévision.
+	 * Douze semaines de commandes passées et reçues, une par semaine : chacune remplace ce qui s'est vendu les sept
+	 * jours d'avant, chaque produit chez son fournisseur habituel le moins cher (hors déstockage), arrondi au colis. Les
+	 * cartons arrivent après le délai annoncé, parfois avec un jour de retard. Déjà reçues, ces commandes ne changent ni
+	 * le stock relevé ni la prévision ; elles nourrissent les statistiques d'achat.
 	 */
 	private void historiqueDeCommandes() {
-		record Passee(int ilYaJours, String fournisseur, int premier, int colis) {
-		}
-		for (Passee passee : List.of(
-				new Passee(21, "labo-direct-occitanie", 0, 2),
-				new Passee(14, "repartiteur-garonne", 6, 0),
-				new Passee(7, "depositaire-sud-ouest", 12, 4))) {
+		for (int semaine = SEMAINES_HISTORIQUE; semaine >= 1; semaine--) {
 			UUID id = UUID.randomUUID();
-			Instant valide = horloge.instant().minus(passee.ilYaJours(), ChronoUnit.DAYS);
-			Instant recu = valide.plus(passee.ilYaJours() == 21 ? 5 : passee.ilYaJours() == 7 ? 2 : 1, ChronoUnit.DAYS);
-			jdbc.update("INSERT INTO panier (id, statut, horizon_jours, cree_le, valide_le, recu_le) VALUES (?, 'RECU', 14, ?, ?, ?)",
-					id, Timestamp.from(valide), Timestamp.from(valide), Timestamp.from(recu));
-			// Quantités : quelques colis (labo, dépositaire) ou une quantité ronde à l'unité (grossiste).
+			Instant valide = horloge.instant().truncatedTo(ChronoUnit.DAYS).minus(7L * semaine, ChronoUnit.DAYS)
+					.plus(9, ChronoUnit.HOURS);
+			LocalDate veille = LocalDate.ofInstant(valide, fr.reassort.ReassortApplication.FUSEAU).minusDays(1);
+			jdbc.update("INSERT INTO panier (id, statut, horizon_jours, cree_le, valide_le, recu_le) VALUES (?, 'RECU', 7, ?, ?, ?)",
+					id, Timestamp.from(valide), Timestamp.from(valide), Timestamp.from(valide));
 			jdbc.update("""
 					INSERT INTO ligne_panier (panier_id, offre_id, quantite, prix_unitaire, statut_produit, quantite_suggeree,
 					                          couverture_jours, livre_apres_rupture, recue_le)
-					SELECT ?, o.id, q.quantite, o.prix_unitaire, 'A_COMMANDER', q.quantite, NULL, FALSE, ?
-					FROM (SELECT o.*, row_number() OVER (ORDER BY o.cip13) AS rang FROM offre o WHERE o.fournisseur_id = ?) o
-					CROSS JOIN LATERAL (SELECT CASE WHEN ? > 0 THEN o.colisage * ? ELSE 10 + (o.rang * 7) % 30 END AS quantite) q
-					WHERE o.rang > ? AND o.rang <= ? + 6""",
-					id, Timestamp.from(recu), passee.fournisseur(), passee.colis(), passee.colis(), passee.premier(),
-					passee.premier());
+					SELECT ?, o.id, CAST(ceil(v.total::numeric / o.colisage) AS INTEGER) * o.colisage, o.prix_unitaire,
+					       'A_COMMANDER', v.total, NULL, FALSE,
+					       -- Reçue au plus tard maintenant : une commande récente n'arrive pas « demain » dans l'historique.
+					       LEAST(CAST(? AS TIMESTAMPTZ) + make_interval(days => o.delai_jours
+					           + CASE WHEN abs(hashtext(o.fournisseur_id || ?)) % 4 = 0 THEN 1 ELSE 0 END), CAST(? AS TIMESTAMPTZ))
+					FROM (SELECT cip13, sum(quantite) AS total FROM vente
+					      WHERE jour > CAST(? AS DATE) - 7 AND jour <= CAST(? AS DATE)
+					      GROUP BY cip13 HAVING sum(quantite) > 0) v
+					CROSS JOIN LATERAL (
+					    SELECT o.* FROM offre o JOIN fournisseur f ON f.id = o.fournisseur_id
+					    WHERE o.cip13 = v.cip13 AND f.type <> 'CONFRERE'
+					    ORDER BY o.prix_unitaire, o.delai_jours LIMIT 1) o""",
+					id, Timestamp.from(valide), String.valueOf(semaine), Timestamp.from(horloge.instant()), veille, veille);
+			jdbc.update("UPDATE panier SET recu_le = (SELECT max(recue_le) FROM ligne_panier WHERE panier_id = ?) WHERE id = ?",
+					id, id);
 		}
 	}
 
